@@ -1,0 +1,63 @@
+name: CMake
+
+on:
+  push:
+    branches: [ "main", "ci/*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  config-build-test:
+    strategy:
+      matrix:
+        config:
+          - os: ubuntu-20.04
+            cxx: g++
+            packages: g++
+          - os: ubuntu-20.04
+            cxx: clang++
+            packages: clang
+          - os: windows-latest
+            cxx: cl
+    runs-on: ${{matrix.config.os}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Toolchain Linux
+        if: runner.os == 'Linux'
+        working-directory: ${{github.workspace}}
+        run: |
+          sudo apt-get install ${{matrix.config.packages}}
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ./bootstrap-vcpkg.sh
+          ./vcpkg --version
+          cd ..
+          cmake --version
+
+      - name: Setup Toolchain Windows
+        if: runner.os == 'Windows'
+        working-directory: ${{github.workspace}}
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ./bootstrap-vcpkg.bat
+          ./vcpkg.exe --version
+          cd ..
+          cmake --version
+
+      - name: Configure
+        working-directory: ${{github.workspace}}
+        env:
+          VCPKG_ROOT: ${{github.workspace}}/vcpkg
+        run: cmake -S . -B build "-DCMAKE_CXX_COMPILER=${{matrix.config.cxx}}" "-DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build .
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --target tests
+          ctest
+

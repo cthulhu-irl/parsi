@@ -1,4 +1,4 @@
-find_package(catch2 CONFIG REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
 
 add_executable(${PROJECT_NAME}-tests)
 
