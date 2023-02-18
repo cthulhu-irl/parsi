@@ -22,6 +22,7 @@ jobs:
     runs-on: ${{matrix.config.os}}
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup Toolchain Linux
         if: runner.os == 'Linux'
         working-directory: ${{github.workspace}}
@@ -44,6 +45,12 @@ jobs:
           ./vcpkg.exe --version
           cd ..
           cmake --version
+
+      - name: Cache Vcpkg Dependencies
+        uses: actions/cache@v3
+        with:
+          key: vcpkg-${{matrix.config.os}}-${{matrix.config.cxx}}
+          path: ${{github.workspace}}/build/vcpkg_installed
 
       - name: Configure
         working-directory: ${{github.workspace}}
