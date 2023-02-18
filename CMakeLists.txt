@@ -12,10 +12,11 @@ project(parsi
     DESCRIPTION "lightweight simple parser combinator"
     LANGUAGES CXX)
 
-option(PARSI_TESTS "build tests" ${PARSI_MAIN_PROJECT})
-option(PARSI_DOCS "build docs" ${PARSI_MAIN_PROJECT})
-option(PARSI_EXAMPLES "build examples" ${PARSI_MAIN_PROJECT})
-option(PARSI_BENCHMARK "build benchmarks" ${PARSI_MAIN_PROJECT})
+option(PARSI_TESTS "build tests" OFF)
+option(PARSI_ENABLE_COVERAGE "enable code coverage" OFF)
+option(PARSI_DOCS "build docs" OFF)
+option(PARSI_EXAMPLES "build examples" OFF)
+option(PARSI_BENCHMARK "build benchmarks" OFF)
 option(PARSI_INSTALL "generate install configs" ${PARSI_MAIN_PROJECT})
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -46,6 +47,19 @@ target_include_directories(${PROJECT_NAME}-options
     INTERFACE
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
+
+if (TOUCA_ENABLE_COVERAGE)
+    if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(FATAL_ERROR "code-coverage with non-Debug build is inaccurate")
+    endif()
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(touca_project_options INTERFACE --coverage -O0 -g)
+        target_link_libraries(touca_project_options INTERFACE --coverage)
+        message(STATUS "added compiler flags to generate coverage report")
+    else()
+        message(WARNING "no known rule to add coverage to compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+endif()
 
 # TODO decide whether to go header-only or not.
 add_library(${PROJECT_NAME} INTERFACE)
