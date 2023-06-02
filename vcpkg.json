@@ -1,8 +1,8 @@
 {
-    "name": "parsi",
-    "version-string": "0.1.0",
-    "dependencies": [
-        "catch2",
-        "benchmark"
-    ]
+  "name": "parsi",
+  "version-semver": "0.0.0",
+  "dependencies": [
+    "catch2",
+    "benchmark"
+  ]
 }
