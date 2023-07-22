@@ -1,70 +1,94 @@
-name: CMake
+name: CI
 
 on:
   push:
-    branches: [ "main", "ci/*" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  config-build-test:
+  linux:
     strategy:
+      fail-fast: true
       matrix:
         config:
-          - os: ubuntu-20.04
-            cxx: g++
-            packages: g++
-          - os: ubuntu-20.04
-            cxx: clang++
-            packages: clang
-          - os: windows-latest
-            cxx: cl
-    runs-on: ${{matrix.config.os}}
+          - preset: linux-x64-debug
+          - preset: linux-x64-release
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Toolchain Linux
-        if: runner.os == 'Linux'
-        working-directory: ${{github.workspace}}
+      - name: Install System Packages
         run: |
-          sudo apt-get install ${{matrix.config.packages}}
-          git clone https://github.com/Microsoft/vcpkg.git
-          cd vcpkg
-          ./bootstrap-vcpkg.sh
-          ./vcpkg --version
-          cd ..
-          cmake --version
+          sudo apt-get update
+          sudo apt-get install build-essential cmake ninja-build
 
-      - name: Setup Toolchain Windows
-        if: runner.os == 'Windows'
-        working-directory: ${{github.workspace}}
+      - name: Setup vcpkg
+        working-directory: /opt
         run: |
+          rm -rf vcpkg
           git clone https://github.com/Microsoft/vcpkg.git
-          cd vcpkg
-          ./bootstrap-vcpkg.bat
-          ./vcpkg.exe --version
-          cd ..
-          cmake --version
+          ./vcpkg/bootstrap-vcpkg.sh
+          ./vcpkg/vcpkg integrate install
+          ./vcpkg/vcpkg --version
+          test -d vcpkg-binary-cache || mkdir vcpkg-binary-cache
 
       - name: Cache Vcpkg Dependencies
         uses: actions/cache@v3
         with:
-          key: vcpkg-${{matrix.config.os}}-${{matrix.config.cxx}}
-          path: ${{github.workspace}}/build/vcpkg_installed
+          key: ${{matrix.config.preset}}
+          path: /opt/vcpkg-binary-cache
 
       - name: Configure
-        working-directory: ${{github.workspace}}
         env:
-          VCPKG_ROOT: ${{github.workspace}}/vcpkg
-        run: cmake -S . -B build "-DCMAKE_CXX_COMPILER=${{matrix.config.cxx}}" "-DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          VCPKG_ROOT: /opt/vcpkg
+          VCPKG_DEFAULT_BINARY_CACHE: /opt/vcpkg-binary-cache
+        run: cmake -S . --preset ${{matrix.config.preset}}
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build .
+        run: cmake --build --preset ${{matrix.config.preset}}
 
       - name: Test
-        working-directory: ${{github.workspace}}/build
         run: |
-          cmake --build . --target tests
-          ctest
+          ctest --preset linux-tests
 
+  windows:
+    strategy:
+      fail-fast: true
+      matrix:
+        config:
+          - preset: windows-x64-debug
+          - preset: windows-x64-release
+    runs-on: windows-latest
+    steps:
+      - name: Prepare
+        uses: actions/checkout@v3
+
+      - name: Setup vcpkg
+        working-directory: C:\
+        shell: bash
+        run: |
+          rm -rf vcpkg
+          git clone https://github.com/Microsoft/vcpkg.git
+          ./vcpkg/bootstrap-vcpkg.bat
+          ./vcpkg/vcpkg.exe --version
+          test -d vcpkg-binary-cache || mkdir vcpkg-binary-cache
+
+      - name: Cache Vcpkg Dependencies
+        uses: actions/cache@v3
+        with:
+          key: ${{matrix.config.preset}}
+          path: C:\vcpkg-binary-cache
+  
+      - name: Configure
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_DEFAULT_BINARY_CACHE: C:\vcpkg-binary-cache
+        run: cmake -S . --preset ${{matrix.config.preset}}
+
+      - name: Build
+        run: cmake --build --preset ${{matrix.config.preset}}
+
+      - name: Test
+        run: |
+          ctest --preset windows-tests

@@ -17,8 +17,8 @@
             }
         },
         {
-            "name": "win-x64-debug",
-            "displayName": "Win x64 Debug",
+            "name": "windows-x64-debug",
+            "displayName": "Windows x64 Debug",
             "description": "Sets windows platform and debug build type for x64 arch",
             "inherits": "base",
             "generator": "Visual Studio 17 2022",
@@ -37,10 +37,10 @@
             }
         },
         {
-            "name": "win-x64-release",
-            "displayName": "Win x64 Release",
+            "name": "windows-x64-release",
+            "displayName": "Windows x64 Release",
             "description": "Sets windows platform and release build type for x64 arch",
-            "inherits": "win-x64-debug",
+            "inherits": "windows-x64-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
@@ -69,7 +69,7 @@
             "name": "linux-x64-release",
             "displayName": "Linux x64 Release",
             "description": "Sets linux platform and release build type for x64 arch",
-            "inherits": "win-x64-debug",
+            "inherits": "linux-x64-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
@@ -78,6 +78,7 @@
             "name": "base-android",
             "hidden": true,
             "inherits": "base",
+            "generator": "Ninja",
             "environment": {
                 "ANDROID_NDK_HOME": "$penv{ANDROID_NDK_HOME}"
             },
@@ -142,14 +143,24 @@
     ],
     "buildPresets": [
 		{
-            "name": "win-x64-debug",
-            "displayName": "Win x64 Debug",
-            "configurePreset": "win-x64-debug"
+            "name": "windows-x64-debug",
+            "displayName": "Windows x64 Debug",
+            "configurePreset": "windows-x64-debug"
         },
         {
-            "name": "win-x64-release",
-            "displayName": "Win x64 Release",
-            "configurePreset": "win-x64-release"
+            "name": "windows-x64-release",
+            "displayName": "Windows x64 Release",
+            "configurePreset": "windows-x64-release"
+        },
+		{
+            "name": "linux-x64-debug",
+            "displayName": "Linux x64 Debug",
+            "configurePreset": "linux-x64-debug"
+        },
+        {
+            "name": "linux-x64-release",
+            "displayName": "Linux x64 Release",
+            "configurePreset": "linux-x64-release"
         },
         {
             "name": "android-arm-debug",
@@ -183,7 +194,7 @@
         {
             "name": "windows-tests",
             "inherits": "base-tests",
-            "configurePreset": "win-x64-debug"
+            "configurePreset": "windows-x64-debug"
         },
         {
             "name": "linux-tests",
