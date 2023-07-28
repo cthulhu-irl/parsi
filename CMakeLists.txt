@@ -15,7 +15,7 @@ project(parsi
 option(PARSI_TESTS "build tests" ${PARSI_MAIN_PROJECT})
 option(PARSI_DOCS "build docs" ${PARSI_MAIN_PROJECT})
 option(PARSI_EXAMPLES "build examples" ${PARSI_MAIN_PROJECT})
-option(PARSI_BENCHMARK "build benchmarks" ${PARSI_MAIN_PROJECT})
+option(PARSI_BENCHMARK "build benchmarks" OFF)
 option(PARSI_INSTALL "generate install configs" ${PARSI_MAIN_PROJECT})
 
 set(CMAKE_CXX_EXTENSIONS OFF)
