@@ -3,6 +3,10 @@
 
 namespace parsi {
 
+inline bool sample() {
+    return true;
+}
+
 }  // namespace parsi
 
 #endif  // PARSI_PARSI_HPP

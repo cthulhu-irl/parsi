@@ -9,11 +9,12 @@ if (NOT DEFINED PARSI_MAIN_PROJECT)
 endif()
 
 project(parsi
-    DESCRIPTION "lightweight simple parser combinator"
+    DESCRIPTION "lightweight parser combinator"
     LANGUAGES CXX)
 
 option(PARSI_TESTS "build tests" ${PARSI_MAIN_PROJECT})
-option(PARSI_DOCS "build docs" ${PARSI_MAIN_PROJECT})
+option(PARSI_ENABLE_COVERAGE "enable code coverage" OFF)
+option(PARSI_DOCS "build docs" OFF)
 option(PARSI_EXAMPLES "build examples" ${PARSI_MAIN_PROJECT})
 option(PARSI_BENCHMARK "build benchmarks" OFF)
 option(PARSI_INSTALL "generate install configs" ${PARSI_MAIN_PROJECT})
@@ -25,7 +26,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 if (NOT DEFINED CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 if (NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
@@ -45,9 +46,22 @@ target_compile_features(${PROJECT_NAME}-options INTERFACE cxx_std_20)
 target_include_directories(${PROJECT_NAME}-options
     INTERFACE
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>)
+        $<INSTALL_INTERFACE:include>
+)
 
-# TODO decide whether to go header-only or not.
+if (PARSI_ENABLE_COVERAGE)
+    if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(WARNING "code-coverage with non-Debug build is inaccurate")
+    endif()
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${PROJECT_NAME}-options INTERFACE --coverage -O0 -g)
+        target_link_libraries(${PROJECT_NAME}-options INTERFACE --coverage)
+        message(STATUS "added compiler flags to generate coverage report")
+    else()
+        message(FATAL_ERROR "no known rule to add coverage to compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+endif()
+
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} INTERFACE ${PROJECT_NAME}-options)
