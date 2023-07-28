@@ -1,0 +1,51 @@
+name: Windows
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: true
+      matrix:
+        config:
+          - preset: windows-x64
+    runs-on: windows-latest
+    steps:
+      - name: Prepare
+        uses: actions/checkout@v3
+
+      - name: Setup vcpkg
+        working-directory: C:\
+        shell: bash
+        run: |
+          rm -rf vcpkg
+          git clone https://github.com/Microsoft/vcpkg.git
+          ./vcpkg/bootstrap-vcpkg.bat
+          ./vcpkg/vcpkg.exe --version
+          test -d vcpkg-binary-cache || mkdir vcpkg-binary-cache
+
+      - name: Cache Vcpkg Dependencies
+        uses: actions/cache@v3
+        with:
+          key: ${{matrix.config.preset}}
+          path: C:\vcpkg-binary-cache
+  
+      - name: Configure
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_DEFAULT_BINARY_CACHE: C:\vcpkg-binary-cache
+        run: cmake -S . --preset ${{matrix.config.preset}}
+
+      - name: Build Debug
+        run: cmake --build --preset ${{matrix.config.preset}} --config Debug
+
+      - name: Build Release
+        run: cmake --build --preset ${{matrix.config.preset}} --config Release
+
+      - name: Test
+        run: |
+          ctest -C Release --preset windows-tests
