@@ -12,8 +12,7 @@ jobs:
       fail-fast: true
       matrix:
         config:
-          - preset: linux-x64-debug
-          - preset: linux-x64-release
+          - preset: linux-x64
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
@@ -47,11 +46,17 @@ jobs:
         run: cmake -S . --preset ${{matrix.config.preset}} -DPARSI_ENABLE_COVERAGE=ON
 
       - name: Build
-        run: cmake --build --preset ${{matrix.config.preset}}
-
-      - name: Test
         run: |
-          ctest --preset linux-tests
+          cmake --build --preset ${{matrix.config.preset}} --config Debug
+          cmake --build --preset ${{matrix.config.preset}} --config Release
+
+      - name: Test Release
+        run: |
+          ctest -C Release --preset linux-tests
+
+      - name: Test Debug and Coverage
+        run: |
+          ctest -C Debug --preset linux-tests
           cmake --build --preset ${{matrix.config.preset}} --target coverage
 
       - name: Codecov
@@ -67,8 +72,7 @@ jobs:
       fail-fast: true
       matrix:
         config:
-          - preset: windows-x64-debug
-          - preset: windows-x64-release
+          - preset: windows-x64
     runs-on: windows-latest
     steps:
       - name: Prepare
@@ -96,9 +100,12 @@ jobs:
           VCPKG_DEFAULT_BINARY_CACHE: C:\vcpkg-binary-cache
         run: cmake -S . --preset ${{matrix.config.preset}}
 
-      - name: Build
-        run: cmake --build --preset ${{matrix.config.preset}}
+      - name: Build Debug
+        run: cmake --build --preset ${{matrix.config.preset}} --config Debug
+
+      - name: Build Release
+        run: cmake --build --preset ${{matrix.config.preset}} --config Release
 
       - name: Test
         run: |
-          ctest --preset windows-tests
+          ctest -C Release --preset windows-tests

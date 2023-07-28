@@ -12,12 +12,15 @@
             "binaryDir": "${sourceDir}/build/${presetName}",
             "installDir": "${sourceDir}/install/${presetName}",
             "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_CONFIGURATION_TYPES": "Debug;Release"
+            },
             "environment": {
                 "VCPKG_ROOT": "$penv{VCPKG_ROOT}"
             }
         },
         {
-            "name": "windows-x64-debug",
+            "name": "windows-x64",
             "displayName": "Windows x64 Debug",
             "description": "Sets windows platform and debug build type for x64 arch",
             "inherits": "base",
@@ -27,7 +30,6 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             },
             "condition": {
@@ -37,26 +39,16 @@
             }
         },
         {
-            "name": "windows-x64-release",
-            "displayName": "Windows x64 Release",
-            "description": "Sets windows platform and release build type for x64 arch",
-            "inherits": "windows-x64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
-            "name": "linux-x64-debug",
-            "displayName": "Linux x64 Debug",
-            "description": "Sets linux platform and debug build type for x64 arch",
+            "name": "linux-x64",
+            "displayName": "Linux x64",
+            "description": "Sets linux platform for x64 arch",
             "inherits": "base",
-            "generator": "Ninja",
+            "generator": "Ninja Multi-Config",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             },
             "condition": {
@@ -66,19 +58,10 @@
             }
         },
         {
-            "name": "linux-x64-release",
-            "displayName": "Linux x64 Release",
-            "description": "Sets linux platform and release build type for x64 arch",
-            "inherits": "linux-x64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
             "name": "base-android",
             "hidden": true,
             "inherits": "base",
-            "generator": "Ninja",
+            "generator": "Ninja Multi-Config",
             "environment": {
                 "ANDROID_NDK_HOME": "$penv{ANDROID_NDK_HOME}"
             },
@@ -93,94 +76,54 @@
             }
         },
         {
-            "name": "android-arm64-debug",
+            "name": "android-arm64",
             "inherits": "base-android",
-            "displayName": "Android ARM64 Debug",
-            "description": "Sets android platform and debug build type for arm64-v8a arch",
+            "displayName": "Android ARM64",
+            "description": "Sets android platform for arm64-v8a arch",
             "architecture": {
                 "value": "arm64-v8a",
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
                 "ANDROID_ABI": "arm64-v8a",
                 "VCPKG_TARGET_TRIPLET": "arm64-android"
             }
         },
-	    {
-            "name": "android-arm64-release",
-            "displayName": "Android ARM64 Release",
-            "description": "Sets android platform and release build type for arm64-v8a arch",
-            "inherits": "android-arm64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
         {
-            "name": "android-arm-debug",
+            "name": "android-arm",
             "inherits": "base-android",
-            "displayName": "Android ARM32 Debug",
-            "description": "Sets android platform and debug build type for armeabi-v7a arch",
+            "displayName": "Android ARM32",
+            "description": "Sets android platform for armeabi-v7a arch",
             "architecture": {
                 "value": "armeabi-v7a",
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
                 "ANDROID_ABI": "armeabi-v7a",
                 "VCPKG_TARGET_TRIPLET": "arm-neon-android"
-            }
-        },      
-	    {
-            "name": "android-arm-release",
-            "displayName": "Android ARM32 Release",
-            "description": "Sets android platform and release build type for armeabi-v7a arch",
-            "inherits": "android-arm-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
             }
         }
     ],
     "buildPresets": [
 		{
-            "name": "windows-x64-debug",
-            "displayName": "Windows x64 Debug",
-            "configurePreset": "windows-x64-debug"
-        },
-        {
-            "name": "windows-x64-release",
-            "displayName": "Windows x64 Release",
-            "configurePreset": "windows-x64-release"
+            "name": "windows-x64",
+            "displayName": "Windows x64",
+            "configurePreset": "windows-x64"
         },
 		{
-            "name": "linux-x64-debug",
-            "displayName": "Linux x64 Debug",
-            "configurePreset": "linux-x64-debug"
+            "name": "linux-x64",
+            "displayName": "Linux x64",
+            "configurePreset": "linux-x64"
         },
         {
-            "name": "linux-x64-release",
-            "displayName": "Linux x64 Release",
-            "configurePreset": "linux-x64-release"
+            "name": "android-arm",
+            "displayName": "Android ARM32",
+            "configurePreset": "android-arm"
         },
         {
-            "name": "android-arm-debug",
-            "displayName": "Android ARM32 Debug",
-            "configurePreset": "android-arm-debug"
-        },
-        {
-            "name": "android-arm-release",
-            "displayName": "Android ARM32 Release",
-            "configurePreset": "android-arm-release"
-        },
-        {
-            "name": "android-arm64-debug",
-            "displayName": "Android ARM64 Debug",
-            "configurePreset": "android-arm64-debug"
-        },
-        {
-            "name": "android-arm64-release",
-            "displayName": "Android ARM64 Release",
-            "configurePreset": "android-arm64-release"
+            "name": "android-arm64",
+            "displayName": "Android ARM64",
+            "configurePreset": "android-arm64"
         }
     ],
     "testPresets": [
@@ -194,12 +137,12 @@
         {
             "name": "windows-tests",
             "inherits": "base-tests",
-            "configurePreset": "windows-x64-debug"
+            "configurePreset": "windows-x64"
         },
         {
             "name": "linux-tests",
             "inherits": "base-tests",
-            "configurePreset": "linux-x64-debug"
+            "configurePreset": "linux-x64"
         }
     ]
 }

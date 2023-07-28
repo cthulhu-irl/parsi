@@ -29,7 +29,7 @@ if (PARSI_ENABLE_COVERAGE)
     add_custom_target(coverage
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${COVERAGE_DIR}
-        COMMAND ctest --output-on-failure
+        COMMAND ctest -C Debug --output-on-failure
 	    COMMAND ${GCOVR_PROGRAM}
                 -r "${PROJECT_SOURCE_DIR}/include"
                 --print-summary
