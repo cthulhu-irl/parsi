@@ -45,18 +45,20 @@ jobs:
           VCPKG_DEFAULT_BINARY_CACHE: /opt/vcpkg-binary-cache
         run: cmake -S . --preset ${{matrix.config.preset}} -DPARSI_ENABLE_COVERAGE=ON
 
-      - name: Build
+      - name: Build Debug
         run: |
           cmake --build --preset ${{matrix.config.preset}} --config Debug
+
+      - name: Build Release
+        run: |
           cmake --build --preset ${{matrix.config.preset}} --config Release
 
       - name: Test Release
         run: |
           ctest -C Release --preset linux-tests
 
-      - name: Test Debug and Coverage
+      - name: Generate Coverage
         run: |
-          ctest -C Debug --preset linux-tests
           cmake --build --preset ${{matrix.config.preset}} --target coverage
 
       - name: Codecov
