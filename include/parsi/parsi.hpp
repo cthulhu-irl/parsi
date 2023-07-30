@@ -1,9 +1,13 @@
 #ifndef PARSI_PARSI_HPP
 #define PARSI_PARSI_HPP
 
-namespace parsi {
+#include <concepts>
+#include <type_traits>
+#include <string_view>
+#include <numeric>
+#include <utility>
 
-namespace internal {}  // namespace internal
+namespace parsi {
 
 struct Stream {
     // or std::span<char>
