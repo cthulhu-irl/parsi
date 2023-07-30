@@ -115,7 +115,7 @@ struct Optional {
     }
 };
 
-template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max>
+template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max()>
 struct Repeated {
     F parser;
 
@@ -147,7 +147,7 @@ template <is_parser F>
 struct RepeatedRanged {
     F parser;
     std::size_t min = 0;
-    std::size_t max = std::numeric_limits<std::size_t>::max;
+    std::size_t max = std::numeric_limits<std::size_t>::max();
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -205,7 +205,7 @@ inline auto optional(F&& parser)
     return fn::Optional<F>{std::forward<F>(parser)};
 }
 
-template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max>
+template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max()>
 inline auto repeat(F&& parser)
 {
     return fn::Repeated<F, Min, Max>{std::forward<F>(parser)};
