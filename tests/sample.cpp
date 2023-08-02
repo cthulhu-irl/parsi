@@ -14,6 +14,7 @@ TEST_CASE("base") {
 
     CHECK(pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWorld"));
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWord"));
+    CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWorld"));
 
     // invalid cases
     CHECK(not pr::expect("fury")("ffury"));
