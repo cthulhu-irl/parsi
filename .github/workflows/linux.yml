@@ -36,7 +36,7 @@ jobs:
       - name: Cache Vcpkg Dependencies
         uses: actions/cache@v3
         with:
-          key: ${{matrix.config.preset}}
+          key: ${{matrix.config.preset}}-${{hashFiles('vcpkg.json')}}
           path: /opt/vcpkg-binary-cache
 
       - name: Configure
