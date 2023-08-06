@@ -1,6 +1,8 @@
 #ifndef PARSI_PARSI_HPP
 #define PARSI_PARSI_HPP
 
+#include <iostream>  // TODO remove
+
 #include <concepts>
 #include <type_traits>
 #include <string_view>
@@ -13,6 +15,11 @@ struct Stream {
     // or std::span<char>
     std::string_view buffer;
     std::size_t cursor;
+
+    constexpr Stream() noexcept
+        : buffer()
+        , cursor{0}
+    {}
 
     constexpr Stream(const char* str) noexcept
         : Stream(std::string_view(str))
@@ -125,18 +132,23 @@ struct Repeated {
 
     constexpr Result operator()(Stream stream) const noexcept
     {
+        if constexpr (Max == 0) {
+            return Result{stream, true};
+        }
+
         Result last;
         std::size_t count = 0;
 
-        auto result = parser(stream);
+        Result result = parser(stream);
         while (result.valid) {
+            ++count;
             last = result;
 
             if (Max < count) {
                 break;
             }
 
-            result = parser(stream);
+            result = parser(result.stream);
         }
 
         if (count < Min || Max < count) {
@@ -209,7 +221,7 @@ inline auto optional(F&& parser)
     return fn::Optional<F>{std::forward<F>(parser)};
 }
 
-template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max()>
+template <std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max(), is_parser F>
 inline auto repeat(F&& parser)
 {
     return fn::Repeated<F, Min, Max>{std::forward<F>(parser)};

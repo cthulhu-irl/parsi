@@ -16,10 +16,22 @@ TEST_CASE("base") {
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWord"));
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWorld"));
 
+    CHECK(pr::repeat(pr::expect("none"))("nope"));
+    CHECK(pr::repeat(pr::expect("once"))("once"));
+    CHECK(pr::repeat(pr::expect("more "))("more more "));
+    CHECK(pr::repeat<1>(pr::expect("at least once"))("at least once at least once"));
+    CHECK(pr::repeat<1>(pr::expect("more "))("more more "));
+    CHECK(pr::repeat<0, 0>(pr::expect("match"))("match"));
+    CHECK(pr::repeat<0, 0>(pr::expect("match"))("yep"));
+    CHECK(pr::repeat<0, 0>(pr::expect("match"))("match"));
+    CHECK(pr::repeat<1, 1>(pr::expect("exactly once"))("exactly once"));
+
     // invalid cases
     CHECK(not pr::expect("fury")("ffury"));
     CHECK(not pr::expect("wrong")("not empty"));
     CHECK(not pr::expect("not empty")(""));
 
     CHECK(not pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWord"));
+    CHECK(not pr::repeat<1>(pr::expect("at least once"))("nope"));
+    CHECK(not pr::repeat<1, 1>(pr::expect("at least once"))("nope"));
 }
