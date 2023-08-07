@@ -92,7 +92,7 @@ struct Visit {
     {
         auto result = parser(stream);
         if (result) {
-            std::string_view buffer = result.stream.buffer;
+            std::string_view buffer = stream.buffer;
             auto start = stream.cursor;
             auto end = result.stream.cursor;
 
@@ -136,7 +136,7 @@ struct Repeated {
             return Result{stream, true};
         }
 
-        Result last;
+        Result last{stream, false};
         std::size_t count = 0;
 
         Result result = parser(stream);
@@ -200,7 +200,7 @@ inline auto expect(std::string_view expected)
     return [expected](Stream stream) -> Result {
         if (stream.buffer.substr(stream.cursor).starts_with(expected)) {
             return Result{
-                .stream = stream.buffer.substr(stream.cursor + expected.size()),
+                .stream = Stream(stream.buffer, stream.cursor + expected.size()),
                 .valid = true
             };
         }
