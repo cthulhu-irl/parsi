@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <string_view>
 #include <numeric>
+#include <bitset>
 #include <utility>
 
 namespace parsi {
@@ -43,6 +44,17 @@ struct Result {
     constexpr operator bool() const noexcept { return valid; }
 };
 
+struct Charset {
+    std::bitset<256> map;
+
+    constexpr explicit Charset(std::string_view charset) noexcept
+    {
+        for (char character : charset) {
+            map.set(static_cast<unsigned char>(character), true);
+        }
+    }
+};
+
 template <typename T>
 concept is_parser = requires(T instance) {
     { std::forward<T>(instance)(std::declval<Stream>()) } -> std::convertible_to<Result>;
@@ -50,6 +62,60 @@ concept is_parser = requires(T instance) {
 
 // visitors
 namespace fn {
+
+struct ExpectChar {
+    char expected;
+
+    constexpr Result operator()(Stream stream) const noexcept
+    {
+        if (stream.cursor >= stream.buffer.size()
+                || stream.buffer[stream.cursor] != expected) {
+            return Result{stream, false};
+        }
+
+        return Result{
+            .stream = Stream(stream.buffer, stream.cursor + 1),
+            .valid = true
+        };
+    }
+};
+
+struct ExpectCharset {
+    Charset charset;
+
+    constexpr Result operator()(Stream stream) const noexcept
+    {
+        if (stream.cursor >= stream.buffer.size()) {
+            return Result{stream, false};
+        }
+
+        const char character = stream.buffer[stream.cursor];
+        if (!charset.map.test(static_cast<unsigned char>(character))) {
+            return Result{stream, false};
+        }
+
+        return Result{
+            .stream = Stream(stream.buffer, stream.cursor + 1),
+            .valid = true
+        };
+    }
+};
+
+struct ExpectString {
+    std::string expected;
+
+    Result operator()(Stream stream) const noexcept
+    {
+        if (!stream.buffer.substr(stream.cursor).starts_with(expected)) {
+            return Result{stream, false};
+        }
+
+        return Result{
+            .stream = Stream(stream.buffer, stream.cursor + expected.size()),
+            .valid = true
+        };
+    }
+};
 
 template <is_parser ...Fs>
 struct Sequence {
@@ -197,16 +263,17 @@ struct RepeatedRanged {
 
 inline auto expect(std::string_view expected)
 {
-    return [expected](Stream stream) -> Result {
-        if (stream.buffer.substr(stream.cursor).starts_with(expected)) {
-            return Result{
-                .stream = Stream(stream.buffer, stream.cursor + expected.size()),
-                .valid = true
-            };
-        }
+    return fn::ExpectString(std::string(expected));
+}
 
-        return Result{stream, false};
-    };
+inline auto expect(char expected)
+{
+    return fn::ExpectChar(expected);
+}
+
+inline auto expect(Charset expected)
+{
+    return fn::ExpectCharset(expected);
 }
 
 template <is_parser ...Fs>
