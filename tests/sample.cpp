@@ -56,11 +56,9 @@ TEST_CASE("complex") {
         pr::expect("}")
     );
 
-    auto res = parser("{Hello!}");
-    CHECK(res);
-    CHECK(res.stream.buffer != "");
-    // CHECK(parser("{Hello! }"));
-    // CHECK(parser("{ Hello!}"));
+    CHECK(parser("{Hello!}"));
+    CHECK(parser("{Hello! }"));
+    CHECK(parser("{ Hello!}"));
     CHECK(parser("{ Hello! }"));
     CHECK(parser("{   Hello!   }"));
 
