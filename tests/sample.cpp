@@ -10,6 +10,13 @@ TEST_CASE("basic usages") {
     CHECK(pr::expect("exactly")("exactly"));
     CHECK(pr::expect("starting")("starting and going"));
 
+    CHECK(pr::expect('a')("abcd"));
+
+    CHECK(pr::expect(pr::Charset("abcd"))("a"));
+    CHECK(pr::expect(pr::Charset("abcd"))("b"));
+    CHECK(pr::expect(pr::Charset("abcd"))("c"));
+    CHECK(pr::expect(pr::Charset("abcd"))("d"));
+
     CHECK(pr::optional(pr::expect("not empty"))(""));
 
     CHECK(pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWorld"));
@@ -35,6 +42,13 @@ TEST_CASE("basic usages") {
     CHECK(not pr::expect("fury")("ffury"));
     CHECK(not pr::expect("wrong")("not empty"));
     CHECK(not pr::expect("not empty")(""));
+
+    CHECK(not pr::expect('a')("bcd"));
+
+    CHECK(not pr::expect(pr::Charset("abcd"))("e"));
+    CHECK(not pr::expect(pr::Charset("abcd"))("f"));
+    CHECK(not pr::expect(pr::Charset("abcd"))("g"));
+    CHECK(not pr::expect(pr::Charset("abcd"))("h"));
 
     CHECK(not pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWord"));
     CHECK(not pr::repeat<1>(pr::expect("at least once"))("nope"));
