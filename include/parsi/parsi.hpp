@@ -1,14 +1,15 @@
 #ifndef PARSI_PARSI_HPP
 #define PARSI_PARSI_HPP
 
-#include <iostream>  // TODO remove
-
 #include <concepts>
 #include <type_traits>
 #include <string_view>
 #include <numeric>
 #include <bitset>
 #include <utility>
+#include <optional>
+#include <tuple>
+#include <array>
 
 namespace parsi {
 
@@ -44,14 +45,59 @@ struct Result {
     constexpr operator bool() const noexcept { return valid; }
 };
 
+template <std::size_t N>
+    requires (N > 0)
+struct Bitset {
+    using primary_type = std::size_t;
+
+    constexpr static std::size_t k_cell_bitcount = sizeof(primary_type) * 8;
+    constexpr static std::size_t k_array_size =
+        (N < k_cell_bitcount) ? (N / k_cell_bitcount) : k_cell_bitcount;
+
+    std::array<primary_type, k_array_size> bytes = {0};
+
+    constexpr Bitset() noexcept {}
+
+    [[nodiscard]] constexpr auto test(const std::size_t index) const noexcept -> bool
+    {
+        if (index >= N) {
+            return false;
+        }
+
+        const auto bit = 1ull << static_cast<primary_type>(index % k_cell_bitcount);
+
+        return bytes[index / k_cell_bitcount] & bit;
+    }
+
+    constexpr void set(const std::size_t index, const bool value) noexcept
+    {
+        if (index >= N) {
+            return;
+        }
+
+        const auto bit = 1ull << static_cast<primary_type>(index % k_cell_bitcount);
+
+        if (value) {
+            bytes[index / k_cell_bitcount] |= bit;
+        } else {
+            bytes[index / k_cell_bitcount] &= ~bit;
+        }
+    }
+};
+
 struct Charset {
-    std::bitset<256> map;
+    Bitset<256> map;
 
     constexpr explicit Charset(std::string_view charset) noexcept
     {
         for (char character : charset) {
             map.set(static_cast<unsigned char>(character), true);
         }
+    }
+
+    bool contains(char character) const noexcept
+    {
+        return map.test(character);
     }
 };
 
@@ -60,7 +106,7 @@ concept is_parser = requires(T instance) {
     { std::forward<T>(instance)(std::declval<Stream>()) } -> std::convertible_to<Result>;
 };
 
-// visitors
+// visitors/functors
 namespace fn {
 
 struct ExpectChar {
@@ -90,7 +136,7 @@ struct ExpectCharset {
         }
 
         const char character = stream.buffer[stream.cursor];
-        if (!charset.map.test(static_cast<unsigned char>(character))) {
+        if (!charset.contains(character)) {
             return Result{stream, false};
         }
 
@@ -119,9 +165,9 @@ struct ExpectString {
 
 template <is_parser ...Fs>
 struct Sequence {
-    std::tuple<Fs...> parsers;
+    std::tuple<std::remove_cvref_t<Fs>...> parsers;
 
-    constexpr explicit Sequence(Fs ...parsers) noexcept
+    constexpr explicit Sequence(std::remove_cvref_t<Fs> ...parsers) noexcept
         : parsers(std::move(parsers)...)
     {}
 
@@ -138,7 +184,7 @@ private:
     {
         auto result = first(stream);
         if (!result) {
-            return Result{result.stream, false};
+            return result;
         }
 
         if constexpr (sizeof...(Rest) == 0) {
@@ -149,10 +195,42 @@ private:
     }
 };
 
+template <is_parser ...Fs>
+struct AnyOf {
+    std::tuple<std::remove_cvref_t<Fs>...> parsers;
+
+    constexpr explicit AnyOf(std::remove_cvref_t<Fs> ...parsers) noexcept
+        : parsers(std::move(parsers)...)
+    {}
+
+    constexpr Result operator()(Stream stream) const noexcept
+    {
+        return std::apply([stream]<typename ...Ts>(Ts&& ...parsers) {
+            return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
+        }, parsers);
+    }
+
+private:
+    template <typename First, typename ...Rest>
+    static constexpr Result parse(Stream stream, First&& first, Rest&& ...rest) noexcept
+    {
+        auto result = first(stream);
+        if (result) {
+            return result;
+        }
+
+        if constexpr (sizeof...(Rest) == 0) {
+            return Result{result.stream, false};
+        } else {
+            return parse<Rest...>(stream, std::forward<Rest>(rest)...);
+        }
+    }
+};
+
 template <is_parser F, std::invocable<std::string_view> G>
 struct Visit {
-    F parser;
-    G visitor;
+    std::remove_cvref_t<F> parser;
+    std::remove_cvref_t<G> visitor;
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -179,7 +257,7 @@ struct Visit {
 
 template <is_parser F>
 struct Optional {
-    F parser;
+    std::remove_cvref_t<F> parser;
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -192,9 +270,11 @@ struct Optional {
     }
 };
 
-template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max()>
+template <is_parser F,
+          std::size_t Min = 0,
+          std::size_t Max = std::numeric_limits<std::size_t>::max()>
 struct Repeated {
-    F parser;
+    std::remove_cvref_t<F> parser;
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -227,7 +307,7 @@ struct Repeated {
 
 template <is_parser F>
 struct RepeatedRanged {
-    F parser;
+    std::remove_cvref_t<F> parser;
     std::size_t min = 0;
     std::size_t max = std::numeric_limits<std::size_t>::max();
 
@@ -259,57 +339,103 @@ struct RepeatedRanged {
     }
 };
 
+template <is_parser F, is_parser G>
+struct RepeatedWhile {
+    std::remove_cvref_t<F> condition;
+    std::remove_cvref_t<G> parser;
+
+    constexpr Result operator()(Stream stream) const noexcept
+    {
+        auto res = Result{stream, true};
+        while (true) {
+            res = condition(stream);
+            if (!res) {
+                return Result{stream, true};
+            }
+
+            res = parser(res.stream);
+            if (!res) {
+                return Result{stream, true};
+            }
+
+            stream = res.stream;
+        }
+
+        return res;
+    }
+};
+
 }  // namespace fn
 
-inline auto expect(std::string_view expected)
+namespace common {
+
+constexpr auto charset_digit = parsi::Charset("0123456789");
+constexpr auto charset_lower = parsi::Charset("abcdefghijklmnopqrstuvwxyz");
+constexpr auto charset_upper = parsi::Charset("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+}  // namespace common
+
+inline auto expect(std::string expected)
 {
-    return fn::ExpectString(std::string(expected));
+    return fn::ExpectString{std::move(expected)};
 }
 
-inline auto expect(char expected)
+constexpr auto expect(char expected)
 {
-    return fn::ExpectChar(expected);
+    return fn::ExpectChar{expected};
 }
 
-inline auto expect(Charset expected)
+constexpr auto expect(Charset expected)
 {
-    return fn::ExpectCharset(expected);
+    return fn::ExpectCharset{expected};
 }
 
 template <is_parser ...Fs>
-inline auto sequence(Fs&& ...parsers)
+constexpr auto sequence(Fs&& ...parsers)
 {
     return fn::Sequence<Fs...>(std::forward<Fs>(parsers)...);
 }
 
+template <is_parser ...Fs>
+constexpr auto anyof(Fs&& ...parsers)
+{
+    return fn::AnyOf<Fs...>(std::forward<Fs>(parsers)...);
+}
+
 template <is_parser F>
-inline auto optional(F&& parser)
+constexpr auto optional(F&& parser)
 {
     return fn::Optional<F>{std::forward<F>(parser)};
 }
 
 template <std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max(), is_parser F>
-inline auto repeat(F&& parser)
+constexpr auto repeat(F&& parser)
 {
     return fn::Repeated<F, Min, Max>{std::forward<F>(parser)};
 }
 
 template <is_parser F>
-inline auto repeat(F&& parser, std::size_t count)
+constexpr auto repeat(F&& parser, std::size_t count)
 {
     return fn::RepeatedRanged<F>{std::forward<F>(parser), count, count};
 }
 
 template <is_parser F>
-inline auto repeat(F&& parser, std::size_t min, std::size_t max)
+constexpr auto repeat(F&& parser, std::size_t min, std::size_t max)
 {
     return fn::RepeatedRanged<F>{std::forward<F>(parser), min, max};
 }
 
-template <is_parser F, std::invocable<std::string_view> G>
-inline auto extract(F&& parser, G&& visitor)
+template <is_parser F, is_parser G>
+constexpr auto repeat_while(F&& condition, G&& parser)
 {
-    return fn::Visit{std::forward<F>(parser), std::forward<G>(visitor)};
+    return fn::RepeatedWhile<F, G>{std::forward<F>(condition), std::forward<G>(parser)};
+}
+
+template <is_parser F, std::invocable<std::string_view> G>
+constexpr auto extract(F&& parser, G&& visitor)
+{
+    return fn::Visit<F, G>{std::forward<F>(parser), std::forward<G>(visitor)};
 }
 
 }  // namespace parsi

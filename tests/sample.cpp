@@ -23,6 +23,9 @@ TEST_CASE("basic usages") {
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWord"));
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWorld"));
 
+    CHECK(pr::anyof(pr::expect("test"), pr::expect("best"))("best"));
+    CHECK(pr::anyof(pr::expect('a'), pr::expect('b'))("best"));
+
     CHECK(pr::repeat(pr::expect(" "))("a b"));
     CHECK(pr::repeat(pr::expect("none"))("nope"));
     CHECK(pr::repeat(pr::expect("once"))("once"));
@@ -33,6 +36,22 @@ TEST_CASE("basic usages") {
     CHECK(pr::repeat<0, 0>(pr::expect("match"))("yep"));
     CHECK(pr::repeat<0, 0>(pr::expect("match"))("match"));
     CHECK(pr::repeat<1, 1>(pr::expect("exactly once"))("exactly once"));
+
+    {
+        auto parser = pr::repeat_while(
+            pr::expect(','),
+            pr::expect(pr::common::charset_digit)
+        );
+
+        std::string_view complete_case = ",1,2,3,4,5,6,7,8,9";
+        std::string_view incomplete_case = "0,1,2,3,4,5,6,7,8,9";
+
+        CHECK(parser(complete_case));
+        CHECK(parser(complete_case).stream.cursor == std::size(complete_case));
+
+        CHECK(parser(incomplete_case));
+        CHECK(parser(incomplete_case).stream.cursor == 0);
+    }
 
     CHECK(pr::extract(pr::expect("test"), [](std::string_view str) {
         CHECK(str == "test");
@@ -51,6 +70,9 @@ TEST_CASE("basic usages") {
     CHECK(not pr::expect(pr::Charset("abcd"))("h"));
 
     CHECK(not pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWord"));
+
+    CHECK(not pr::anyof(pr::expect("test"), pr::expect("best"))("rest"));
+
     CHECK(not pr::repeat<1>(pr::expect("at least once"))("nope"));
     CHECK(not pr::repeat<1, 1>(pr::expect("at least once"))("nope"));
 
@@ -81,4 +103,37 @@ TEST_CASE("complex") {
     CHECK(not parser("Hello!}"));
     CHECK(not parser("{Hell!}"));
     CHECK(not parser(" { Hello! } "));
+}
+
+TEST_CASE("Bitset") {
+    SECTION("constexpr") {
+        constexpr auto bitset = []() {
+            pr::Bitset<125> ret;
+            ret.set(0, true);
+            ret.set(1, true);
+            ret.set(84, true);
+            ret.set(42, true);
+            ret.set(127, true);
+            return ret;
+        }();
+
+        CHECK(bitset.test(0));
+        CHECK(bitset.test(1));
+        CHECK(bitset.test(84));
+        CHECK(bitset.test(42));
+
+        CHECK(not bitset.test(64));
+        CHECK(not bitset.test(128));
+        CHECK(not bitset.test(125));
+    }
+
+    SECTION("set false") {
+        pr::Bitset<64> bitset;
+
+        bitset.set(42, true);
+        CHECK(bitset.test(42));
+
+        bitset.set(42, false);
+        CHECK(not bitset.test(42));
+    }
 }
