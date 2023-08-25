@@ -10,6 +10,50 @@
 
 namespace parsi {
 
+namespace internal {
+
+template <std::size_t N>
+    requires (N > 0)
+struct Bitset {
+    using primary_type = std::size_t;
+
+    constexpr static std::size_t k_cell_bitcount = sizeof(primary_type) * 8;
+    constexpr static std::size_t k_array_size =
+        (N < k_cell_bitcount) ? (N / k_cell_bitcount) : k_cell_bitcount;
+
+    std::array<primary_type, k_array_size> bytes = {0};
+
+    constexpr Bitset() noexcept {}
+
+    [[nodiscard]] constexpr auto test(const std::size_t index) const noexcept -> bool
+    {
+        if (index >= N) {
+            return false;
+        }
+
+        const auto bit = 1ull << static_cast<primary_type>(index % k_cell_bitcount);
+
+        return bytes[index / k_cell_bitcount] & bit;
+    }
+
+    constexpr void set(const std::size_t index, const bool value) noexcept
+    {
+        if (index >= N) {
+            return;
+        }
+
+        const auto bit = 1ull << static_cast<primary_type>(index % k_cell_bitcount);
+
+        if (value) {
+            bytes[index / k_cell_bitcount] |= bit;
+        } else {
+            bytes[index / k_cell_bitcount] &= ~bit;
+        }
+    }
+};
+
+}  // namespace internal
+
 struct Stream {
     // or std::span<char>
     std::string_view buffer;
@@ -43,13 +87,18 @@ struct Result {
 };
 
 struct Charset {
-    std::bitset<256> map;
+    internal::Bitset<256> map;
 
     constexpr explicit Charset(std::string_view charset) noexcept
     {
         for (char character : charset) {
             map.set(static_cast<unsigned char>(character), true);
         }
+    }
+
+    [[nodiscard]] constexpr auto contains(char character) const noexcept -> bool
+    {
+        return map.test(static_cast<std::size_t>(character));
     }
 };
 
@@ -259,19 +308,19 @@ struct RepeatedRanged {
 
 }  // namespace fn
 
-inline auto expect(std::string_view expected)
+inline auto expect(std::string expected)
 {
-    return fn::ExpectString(std::string(expected));
+    return fn::ExpectString{std::move(expected)};
 }
 
-inline auto expect(char expected)
+constexpr auto expect(char expected) noexcept
 {
-    return fn::ExpectChar(expected);
+    return fn::ExpectChar{expected};
 }
 
-inline auto expect(Charset expected)
+constexpr auto expect(Charset expected) noexcept
 {
-    return fn::ExpectCharset(expected);
+    return fn::ExpectCharset{expected};
 }
 
 template <is_parser ...Fs>
