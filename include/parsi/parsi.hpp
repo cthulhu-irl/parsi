@@ -83,7 +83,7 @@ struct Result {
     Stream stream;
     bool valid = false;
 
-    constexpr operator bool() const noexcept { return valid; }
+    [[nodiscard]] constexpr operator bool() const noexcept { return valid; }
 };
 
 struct Charset {
@@ -113,7 +113,7 @@ namespace fn {
 struct ExpectChar {
     char expected;
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         if (stream.cursor >= stream.buffer.size()
                 || stream.buffer[stream.cursor] != expected) {
@@ -130,14 +130,14 @@ struct ExpectChar {
 struct ExpectCharset {
     Charset charset;
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         if (stream.cursor >= stream.buffer.size()) {
             return Result{stream, false};
         }
 
         const char character = stream.buffer[stream.cursor];
-        if (!charset.map.test(static_cast<unsigned char>(character))) {
+        if (!charset.contains(character)) {
             return Result{stream, false};
         }
 
@@ -151,7 +151,7 @@ struct ExpectCharset {
 struct ExpectString {
     std::string expected;
 
-    Result operator()(Stream stream) const noexcept
+    [[nodiscard]] auto operator()(Stream stream) const noexcept -> Result
     {
         if (!stream.buffer.substr(stream.cursor).starts_with(expected)) {
             return Result{stream, false};
@@ -172,7 +172,7 @@ struct Sequence {
         : parsers(std::move(parsers)...)
     {}
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         return std::apply([stream]<typename ...Ts>(Ts&& ...parsers) {
             return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
@@ -181,11 +181,14 @@ struct Sequence {
 
 private:
     template <typename First, typename ...Rest>
-    static constexpr Result parse(Stream stream, First&& first, Rest&& ...rest) noexcept
+    [[nodiscard]] static constexpr auto parse(Stream stream,
+                                              First&& first,
+                                              Rest&& ...rest) noexcept
+        -> Result
     {
         auto result = first(stream);
         if (!result) {
-            return Result{result.stream, false};
+            return result;
         }
 
         if constexpr (sizeof...(Rest) == 0) {
@@ -201,7 +204,7 @@ struct Visit {
     std::remove_cvref_t<F> parser;
     std::remove_cvref_t<G> visitor;
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         auto result = parser(stream);
         if (result) {
@@ -228,7 +231,7 @@ template <is_parser F>
 struct Optional {
     std::remove_cvref_t<F> parser;
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         auto result = parser(stream);
         if (!result) {
@@ -243,7 +246,7 @@ template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limit
 struct Repeated {
     std::remove_cvref_t<F> parser;
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         if constexpr (Max == 0) {
             return Result{stream, true};
@@ -278,7 +281,7 @@ struct RepeatedRanged {
     std::size_t min = 0;
     std::size_t max = std::numeric_limits<std::size_t>::max();
 
-    constexpr Result operator()(Stream stream) const noexcept
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         if (min > max) {
             return Result{stream, false};
@@ -308,53 +311,55 @@ struct RepeatedRanged {
 
 }  // namespace fn
 
-inline auto expect(std::string expected)
+[[nodiscard]] inline auto expect(std::string expected)
 {
     return fn::ExpectString{std::move(expected)};
 }
 
-constexpr auto expect(char expected) noexcept
+[[nodiscard]] constexpr auto expect(char expected) noexcept
 {
     return fn::ExpectChar{expected};
 }
 
-constexpr auto expect(Charset expected) noexcept
+[[nodiscard]] constexpr auto expect(Charset expected) noexcept
 {
     return fn::ExpectCharset{expected};
 }
 
 template <is_parser ...Fs>
-inline auto sequence(Fs&& ...parsers)
+[[nodiscard]] constexpr auto sequence(Fs&& ...parsers)
 {
     return fn::Sequence<Fs...>(std::forward<Fs>(parsers)...);
 }
 
 template <is_parser F>
-inline auto optional(F&& parser)
+[[nodiscard]] constexpr auto optional(F&& parser)
 {
     return fn::Optional<F>{std::forward<F>(parser)};
 }
 
-template <std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max(), is_parser F>
-inline auto repeat(F&& parser)
+template <std::size_t Min = 0,
+          std::size_t Max = std::numeric_limits<std::size_t>::max(),
+          is_parser F>
+[[nodiscard]] constexpr auto repeat(F&& parser)
 {
     return fn::Repeated<F, Min, Max>{std::forward<F>(parser)};
 }
 
 template <is_parser F>
-inline auto repeat(F&& parser, std::size_t count)
+[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t count)
 {
     return fn::RepeatedRanged<F>{std::forward<F>(parser), count, count};
 }
 
 template <is_parser F>
-inline auto repeat(F&& parser, std::size_t min, std::size_t max)
+[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t min, std::size_t max)
 {
     return fn::RepeatedRanged<F>{std::forward<F>(parser), min, max};
 }
 
 template <is_parser F, std::invocable<std::string_view> G>
-inline auto extract(F&& parser, G&& visitor)
+[[nodiscard]] constexpr auto extract(F&& parser, G&& visitor)
 {
     return fn::Visit<F, G>{std::forward<F>(parser), std::forward<G>(visitor)};
 }
