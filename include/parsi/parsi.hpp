@@ -1,11 +1,13 @@
 #ifndef PARSI_PARSI_HPP
 #define PARSI_PARSI_HPP
 
+#include <array>
 #include <concepts>
 #include <type_traits>
 #include <string_view>
 #include <numeric>
 #include <bitset>
+#include <tuple>
 #include <utility>
 
 namespace parsi {
@@ -359,6 +361,17 @@ struct RepeatedRanged {
 [[nodiscard]] constexpr auto expect(Charset expected) noexcept
 {
     return fn::ExpectCharset{expected};
+}
+
+[[nodiscard]] constexpr auto eos() noexcept
+{
+    return [](Stream stream) -> Result {
+        if (stream.cursor != stream.buffer.size()) {
+            return Result{stream, false};
+        }
+
+        return Result{stream, true};
+    };
 }
 
 template <is_parser ...Fs>

@@ -17,6 +17,8 @@ TEST_CASE("basic usages") {
     CHECK(pr::expect(pr::Charset("abcd"))("c"));
     CHECK(pr::expect(pr::Charset("abcd"))("d"));
 
+    CHECK(pr::eos()(""));
+
     CHECK(pr::optional(pr::expect("not empty"))(""));
 
     CHECK(pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWorld"));
@@ -52,6 +54,8 @@ TEST_CASE("basic usages") {
     CHECK(not pr::expect(pr::Charset("abcd"))("f"));
     CHECK(not pr::expect(pr::Charset("abcd"))("g"));
     CHECK(not pr::expect(pr::Charset("abcd"))("h"));
+
+    CHECK(not pr::eos()("test"));
 
     CHECK(not pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWord"));
 
