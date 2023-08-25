@@ -1,8 +1,6 @@
 #ifndef PARSI_PARSI_HPP
 #define PARSI_PARSI_HPP
 
-#include <iostream>  // TODO remove
-
 #include <concepts>
 #include <type_traits>
 #include <string_view>
@@ -119,9 +117,9 @@ struct ExpectString {
 
 template <is_parser ...Fs>
 struct Sequence {
-    std::tuple<Fs...> parsers;
+    std::tuple<std::remove_cvref_t<Fs>...> parsers;
 
-    constexpr explicit Sequence(Fs ...parsers) noexcept
+    constexpr explicit Sequence(std::remove_cvref_t<Fs> ...parsers) noexcept
         : parsers(std::move(parsers)...)
     {}
 
@@ -151,8 +149,8 @@ private:
 
 template <is_parser F, std::invocable<std::string_view> G>
 struct Visit {
-    F parser;
-    G visitor;
+    std::remove_cvref_t<F> parser;
+    std::remove_cvref_t<G> visitor;
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -179,7 +177,7 @@ struct Visit {
 
 template <is_parser F>
 struct Optional {
-    F parser;
+    std::remove_cvref_t<F> parser;
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -194,7 +192,7 @@ struct Optional {
 
 template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max()>
 struct Repeated {
-    F parser;
+    std::remove_cvref_t<F> parser;
 
     constexpr Result operator()(Stream stream) const noexcept
     {
@@ -227,7 +225,7 @@ struct Repeated {
 
 template <is_parser F>
 struct RepeatedRanged {
-    F parser;
+    std::remove_cvref_t<F> parser;
     std::size_t min = 0;
     std::size_t max = std::numeric_limits<std::size_t>::max();
 
@@ -309,7 +307,7 @@ inline auto repeat(F&& parser, std::size_t min, std::size_t max)
 template <is_parser F, std::invocable<std::string_view> G>
 inline auto extract(F&& parser, G&& visitor)
 {
-    return fn::Visit{std::forward<F>(parser), std::forward<G>(visitor)};
+    return fn::Visit<F, G>{std::forward<F>(parser), std::forward<G>(visitor)};
 }
 
 }  // namespace parsi
