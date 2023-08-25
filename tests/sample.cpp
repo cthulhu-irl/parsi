@@ -23,6 +23,9 @@ TEST_CASE("basic usages") {
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWord"));
     CHECK(pr::sequence(pr::expect("Hello"), pr::optional(pr::expect("World")))("HelloWorld"));
 
+    CHECK(pr::anyof(pr::expect("test"), pr::expect("best"))("best"));
+    CHECK(pr::anyof(pr::expect('a'), pr::expect('b'))("best"));
+
     CHECK(pr::repeat(pr::expect(" "))("a b"));
     CHECK(pr::repeat(pr::expect("none"))("nope"));
     CHECK(pr::repeat(pr::expect("once"))("once"));
@@ -51,6 +54,9 @@ TEST_CASE("basic usages") {
     CHECK(not pr::expect(pr::Charset("abcd"))("h"));
 
     CHECK(not pr::sequence(pr::expect("Hello"), pr::expect("World"))("HelloWord"));
+
+    CHECK(not pr::anyof(pr::expect("test"), pr::expect("best"))("rest"));
+
     CHECK(not pr::repeat<1>(pr::expect("at least once"))("nope"));
     CHECK(not pr::repeat<1, 1>(pr::expect("at least once"))("nope"));
 
