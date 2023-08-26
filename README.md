@@ -20,7 +20,6 @@ struct Color {
 
 constexpr auto color_from_string(std::string_view str) -> std::optional<Color>
 {
-    constexpr auto hex_charset = parsi::Charset("0123456789abcdefABCDEF");
     constexpr auto convert_hex_digit = [](char digit) -> std::uint8_t {
         if ('0' <= digit && digit <= '9') {
             return digit - '0';
@@ -39,6 +38,8 @@ constexpr auto color_from_string(std::string_view str) -> std::optional<Color>
     };
 
     Color color;
+
+    constexpr auto hex_charset = parsi::Charset("0123456789abcdefABCDEF");
 
     auto parser = parsi::sequence(
         parsi::expect('#'),
