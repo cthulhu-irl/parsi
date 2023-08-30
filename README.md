@@ -4,13 +4,15 @@
 [![Build:Windows](https://github.com/cthulhu-irl/parsi/actions/workflows/windows.yml/badge.svg)](https://github.com/cthulhu-irl/parsi/actions?query=workflow%3AWindows)
 [![codecov](https://codecov.io/gh/cthulhu-irl/parsi/branch/build/coverage/graph/badge.svg?token=U2QVK5MRNW)](https://codecov.io/gh/cthulhu-irl/parsi)
 
-NOTE: this is WIP and not ready.
+NOTE: this is WIP/prototype and not ready.
 
 parsi is a [parser combinator](https://en.wikipedia.org/wiki/Parser_combinator) library that provides basic parser blocks and a common way to define and combine parsers into more complex parsers.
 
-it can be used as an alternative to complex regex, especially when data needs to be extracted.
+It can be used as an alternative to complex regex, especially when data needs to be extracted.
 
-a simple hex color parser would look like this:
+The minimum required standard is currently `C++20`.
+
+A simple hex color parser would look like this:
 ```cpp
 struct Color {
     std::uint8_t red = 0;
