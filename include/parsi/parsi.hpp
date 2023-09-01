@@ -2,12 +2,12 @@
 #define PARSI_PARSI_HPP
 
 #include <array>
-#include <concepts>
-#include <type_traits>
-#include <string_view>
-#include <numeric>
 #include <bitset>
+#include <concepts>
+#include <numeric>
+#include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace parsi {
@@ -15,7 +15,7 @@ namespace parsi {
 namespace internal {
 
 template <std::size_t N>
-    requires (N > 0)
+    requires(N > 0)
 struct Bitset {
     using primary_type = std::size_t;
 
@@ -25,7 +25,9 @@ struct Bitset {
 
     std::array<primary_type, k_array_size> bytes = {0};
 
-    constexpr Bitset() noexcept {}
+    constexpr Bitset() noexcept
+    {
+    }
 
     [[nodiscard]] constexpr auto test(const std::size_t index) const noexcept -> bool
     {
@@ -48,7 +50,8 @@ struct Bitset {
 
         if (value) {
             bytes[index / k_cell_bitcount] |= bit;
-        } else {
+        }
+        else {
             bytes[index / k_cell_bitcount] &= ~bit;
         }
     }
@@ -61,31 +64,32 @@ struct Stream {
     std::string_view buffer;
     std::size_t cursor;
 
-    constexpr Stream() noexcept
-        : buffer()
-        , cursor{0}
-    {}
+    constexpr Stream() noexcept : buffer(), cursor{0}
+    {
+    }
 
-    constexpr Stream(const char* str) noexcept
-        : Stream(std::string_view(str))
-    {}
+    constexpr Stream(const char* str) noexcept : Stream(std::string_view(str))
+    {
+    }
 
-    constexpr Stream(std::string_view str) noexcept
-        : buffer(str)
-        , cursor(0)
-    {}
+    constexpr Stream(std::string_view str) noexcept : buffer(str), cursor(0)
+    {
+    }
 
     constexpr Stream(std::string_view str, std::size_t offset) noexcept
-        : buffer(str)
-        , cursor(offset)
-    {}
+        : buffer(str), cursor(offset)
+    {
+    }
 };
 
 struct Result {
     Stream stream;
     bool valid = false;
 
-    [[nodiscard]] constexpr operator bool() const noexcept { return valid; }
+    [[nodiscard]] constexpr operator bool() const noexcept
+    {
+        return valid;
+    }
 };
 
 struct Charset {
@@ -106,7 +110,9 @@ struct Charset {
 
 template <typename T>
 concept is_parser = requires(T instance) {
-    { std::forward<T>(instance)(std::declval<Stream>()) } -> std::convertible_to<Result>;
+    {
+        std::forward<T>(instance)(std::declval<Stream>())
+    } -> std::convertible_to<Result>;
 };
 
 // visitors
@@ -117,15 +123,11 @@ struct ExpectChar {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (stream.cursor >= stream.buffer.size()
-                || stream.buffer[stream.cursor] != expected) {
+        if (stream.cursor >= stream.buffer.size() || stream.buffer[stream.cursor] != expected) {
             return Result{stream, false};
         }
 
-        return Result{
-            .stream = Stream(stream.buffer, stream.cursor + 1),
-            .valid = true
-        };
+        return Result{.stream = Stream(stream.buffer, stream.cursor + 1), .valid = true};
     }
 };
 
@@ -143,10 +145,7 @@ struct ExpectCharset {
             return Result{stream, false};
         }
 
-        return Result{
-            .stream = Stream(stream.buffer, stream.cursor + 1),
-            .valid = true
-        };
+        return Result{.stream = Stream(stream.buffer, stream.cursor + 1), .valid = true};
     }
 };
 
@@ -159,33 +158,32 @@ struct ExpectString {
             return Result{stream, false};
         }
 
-        return Result{
-            .stream = Stream(stream.buffer, stream.cursor + expected.size()),
-            .valid = true
-        };
+        return Result{.stream = Stream(stream.buffer, stream.cursor + expected.size()),
+                      .valid = true};
     }
 };
 
-template <is_parser ...Fs>
+template <is_parser... Fs>
 struct Sequence {
     std::tuple<std::remove_cvref_t<Fs>...> parsers;
 
-    constexpr explicit Sequence(std::remove_cvref_t<Fs> ...parsers) noexcept
+    constexpr explicit Sequence(std::remove_cvref_t<Fs>... parsers) noexcept
         : parsers(std::move(parsers)...)
-    {}
+    {
+    }
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        return std::apply([stream]<typename ...Ts>(Ts&& ...parsers) {
-            return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
-        }, parsers);
+        return std::apply(
+            [stream]<typename... Ts>(Ts&&... parsers) {
+                return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
+            },
+            parsers);
     }
 
-  private:
-    template <typename First, typename ...Rest>
-    [[nodiscard]] static constexpr auto parse(Stream stream,
-                                              First&& first,
-                                              Rest&& ...rest) noexcept
+private:
+    template <typename First, typename... Rest>
+    [[nodiscard]] static constexpr auto parse(Stream stream, First&& first, Rest&&... rest) noexcept
         -> Result
     {
         auto result = first(stream);
@@ -195,32 +193,34 @@ struct Sequence {
 
         if constexpr (sizeof...(Rest) == 0) {
             return result;
-        } else {
+        }
+        else {
             return parse<Rest...>(result.stream, std::forward<Rest>(rest)...);
         }
     }
 };
 
-template <is_parser ...Fs>
+template <is_parser... Fs>
 struct AnyOf {
     std::tuple<std::remove_cvref_t<Fs>...> parsers;
 
-    constexpr explicit AnyOf(std::remove_cvref_t<Fs> ...parsers) noexcept
+    constexpr explicit AnyOf(std::remove_cvref_t<Fs>... parsers) noexcept
         : parsers(std::move(parsers)...)
-    {}
+    {
+    }
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        return std::apply([stream]<typename ...Ts>(Ts&& ...parsers) {
-            return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
-        }, parsers);
+        return std::apply(
+            [stream]<typename... Ts>(Ts&&... parsers) {
+                return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
+            },
+            parsers);
     }
 
-  private:
-    template <typename First, typename ...Rest>
-    [[nodiscard]] static constexpr auto parse(Stream stream,
-                                              First&& first,
-                                              Rest&& ...rest) noexcept
+private:
+    template <typename First, typename... Rest>
+    [[nodiscard]] static constexpr auto parse(Stream stream, First&& first, Rest&&... rest) noexcept
         -> Result
     {
         auto result = first(stream);
@@ -230,7 +230,8 @@ struct AnyOf {
 
         if constexpr (sizeof...(Rest) == 0) {
             return Result{result.stream, false};
-        } else {
+        }
+        else {
             return parse<Rest...>(stream, std::forward<Rest>(rest)...);
         }
     }
@@ -251,11 +252,16 @@ struct Visit {
 
             std::string_view substr = buffer.substr(start, end - start);
 
-            if constexpr (requires { { visitor(substr) } -> std::same_as<bool>; }) {
+            if constexpr (requires {
+                              {
+                                  visitor(substr)
+                              } -> std::same_as<bool>;
+                          }) {
                 if (!visitor(substr)) {
                     return Result{result.stream, false};
                 }
-            } else {
+            }
+            else {
                 visitor(substr);
             }
         }
@@ -279,7 +285,8 @@ struct Optional {
     }
 };
 
-template <is_parser F, std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max()>
+template <is_parser F, std::size_t Min = 0,
+          std::size_t Max = std::numeric_limits<std::size_t>::max()>
 struct Repeated {
     std::remove_cvref_t<F> parser;
 
@@ -374,14 +381,14 @@ struct RepeatedRanged {
     };
 }
 
-template <is_parser ...Fs>
-[[nodiscard]] constexpr auto sequence(Fs&& ...parsers)
+template <is_parser... Fs>
+[[nodiscard]] constexpr auto sequence(Fs&&... parsers)
 {
     return fn::Sequence<Fs...>(std::forward<Fs>(parsers)...);
 }
 
-template <is_parser ...Fs>
-constexpr auto anyof(Fs&& ...parsers)
+template <is_parser... Fs>
+constexpr auto anyof(Fs&&... parsers)
 {
     return fn::AnyOf<Fs...>(std::forward<Fs>(parsers)...);
 }
@@ -392,8 +399,7 @@ template <is_parser F>
     return fn::Optional<F>{std::forward<F>(parser)};
 }
 
-template <std::size_t Min = 0,
-          std::size_t Max = std::numeric_limits<std::size_t>::max(),
+template <std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max(),
           is_parser F>
 [[nodiscard]] constexpr auto repeat(F&& parser)
 {

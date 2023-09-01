@@ -1,0 +1,18 @@
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++20
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+BreakBeforeBinaryOperators: false
+SpacesBeforeTrailingComments: 2
+AlwaysBreakTemplateDeclarations: Yes
+AlignOperands: AlignAfterOperator
+AlignAfterOpenBracket: Align
+BreakBeforeBraces: Stroustrup
