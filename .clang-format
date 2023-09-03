@@ -16,3 +16,5 @@ AlwaysBreakTemplateDeclarations: Yes
 AlignOperands: AlignAfterOperator
 AlignAfterOpenBracket: Align
 BreakBeforeBraces: Stroustrup
+BreakConstructorInitializers: BeforeComma
+BreakBeforeTernaryOperators: true
