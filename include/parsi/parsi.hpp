@@ -5,6 +5,7 @@
 #include <bitset>
 #include <concepts>
 #include <numeric>
+#include <span>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -59,26 +60,97 @@ struct Bitset {
 
 }  // namespace internal
 
-struct Stream {
-    // or std::span<char>
-    std::string_view buffer;
-    std::size_t cursor;
+class Stream {
+public:
+    using buffer_type = std::span<const char>;
 
-    constexpr Stream() noexcept : buffer(), cursor{0}
+private:
+    buffer_type _buffer{};
+    std::size_t _cursor = 0;
+
+public:
+    constexpr Stream(const char* str) noexcept
+        : Stream(str, std::strlen(str))
     {
     }
 
-    constexpr Stream(const char* str) noexcept : Stream(std::string_view(str))
+    constexpr Stream(const char* str, const std::size_t size) noexcept
+        : _buffer(str, size)
+        , _cursor(0)
     {
     }
 
-    constexpr Stream(std::string_view str) noexcept : buffer(str), cursor(0)
+    constexpr Stream(std::string_view str) noexcept
+        : _buffer(str.data(), str.size())
+        , _cursor(0)
     {
     }
 
-    constexpr Stream(std::string_view str, std::size_t offset) noexcept
-        : buffer(str), cursor(offset)
+    constexpr Stream(buffer_type buffer) noexcept
+        : _buffer(buffer)
+        , _cursor(0)
     {
+    }
+
+    [[nodicard]] constexpr auto advanced(std::size_t count) -> Stream
+    {
+        auto ret = Stream(_buffer);
+        ret._cursor = _cursor + count;
+        return ret;
+    }
+
+    [[nodicard]] constexpr auto starts_with(const char character) const noexcept -> bool
+    {
+        if (_cursor >= _buffer.size()) [[unlikely]] {
+            return false;
+        }
+
+        return character == _buffer[_cursor];
+    }
+
+    [[nodicard]] constexpr auto starts_with(std::span<const char> span) const noexcept -> bool
+    {
+        if (size() < span.size()) {
+            return false;
+        }
+
+        for (std::size_t idx = 0; idx < span.size(); ++idx) {
+            if (_buffer[_cursor + idx] != span[idx]) [[unlikely]] {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
+    {
+        return _buffer.size() - _cursor;
+    }
+
+    [[nodiscard]] constexpr auto buffer_size() const noexcept -> std::size_t
+    {
+        return _buffer.size();
+    }
+
+    [[nodiscard]] constexpr auto cursor() const noexcept -> std::size_t
+    {
+        return _cursor;
+    }
+
+    [[nodiscard]] constexpr auto buffer() const noexcept -> buffer_type
+    {
+        return _buffer;
+    }
+
+    [[nodiscard]] constexpr auto at(const std::size_t index) const noexcept -> const char
+    {
+        return _buffer[_cursor + index];
+    }
+
+    [[nodiscard]] constexpr auto front() const noexcept -> const char
+    {
+        return _buffer[_cursor];
     }
 };
 
@@ -123,11 +195,11 @@ struct ExpectChar {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (stream.cursor >= stream.buffer.size() || stream.buffer[stream.cursor] != expected) {
+        if (!stream.starts_with(expected)) {
             return Result{stream, false};
         }
 
-        return Result{.stream = Stream(stream.buffer, stream.cursor + 1), .valid = true};
+        return Result{stream.advanced(1), true};
     }
 };
 
@@ -136,16 +208,16 @@ struct ExpectCharset {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (stream.cursor >= stream.buffer.size()) {
+        if (stream.size() <= 0) {
             return Result{stream, false};
         }
 
-        const char character = stream.buffer[stream.cursor];
+        const char character = stream.front();
         if (!charset.contains(character)) {
             return Result{stream, false};
         }
 
-        return Result{.stream = Stream(stream.buffer, stream.cursor + 1), .valid = true};
+        return Result{stream.advanced(1), true};
     }
 };
 
@@ -154,12 +226,11 @@ struct ExpectString {
 
     [[nodiscard]] auto operator()(Stream stream) const noexcept -> Result
     {
-        if (!stream.buffer.substr(stream.cursor).starts_with(expected)) {
+        if (!stream.starts_with(expected)) {
             return Result{stream, false};
         }
 
-        return Result{.stream = Stream(stream.buffer, stream.cursor + expected.size()),
-                      .valid = true};
+        return Result{stream.advanced(expected.size()), true};
     }
 };
 
@@ -246,11 +317,12 @@ struct Visit {
     {
         auto result = parser(stream);
         if (result) {
-            std::string_view buffer = stream.buffer;
-            auto start = stream.cursor;
-            auto end = result.stream.cursor;
+            auto buffer = stream.buffer();
+            auto start = stream.cursor();
+            auto end = result.stream.cursor();
 
-            std::string_view substr = buffer.substr(start, end - start);
+            auto subspan = buffer.subspan(start, end - start);
+            auto substr = std::string_view(subspan.data(), subspan.size());
 
             if constexpr (requires {
                               {
@@ -373,7 +445,7 @@ struct RepeatedRanged {
 [[nodiscard]] constexpr auto eos() noexcept
 {
     return [](Stream stream) -> Result {
-        if (stream.cursor != stream.buffer.size()) {
+        if (stream.size() > 0) {
             return Result{stream, false};
         }
 
