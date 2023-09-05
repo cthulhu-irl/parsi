@@ -2,7 +2,11 @@ find_package(Catch2 CONFIG REQUIRED)
 
 add_executable(${PROJECT_NAME}-tests)
 
-target_sources(${PROJECT_NAME}-tests PRIVATE sample.cpp)
+target_sources(${PROJECT_NAME}-tests
+    PRIVATE
+        parsers.cpp
+        bitset.cpp
+)
 
 target_link_libraries(${PROJECT_NAME}-tests
     PRIVATE

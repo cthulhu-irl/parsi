@@ -66,6 +66,12 @@ add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} INTERFACE ${PROJECT_NAME}-options)
 
+file(GLOB_RECURSE PARSI_HEADERS
+    include/*.hpp
+    include/**/*.hpp
+)
+target_sources(${PROJECT_NAME} PRIVATE ${PARSI_HEADERS})
+
 if (PARSI_TESTS)
     enable_testing()
     add_subdirectory(tests)
