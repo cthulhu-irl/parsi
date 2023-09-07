@@ -6,6 +6,7 @@ target_sources(${PROJECT_NAME}-tests
     PRIVATE
         parsers.cpp
         bitset.cpp
+        charset.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}-tests
