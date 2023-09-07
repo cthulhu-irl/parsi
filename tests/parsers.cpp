@@ -50,12 +50,11 @@ TEST_CASE("sequence")
 }
 
 TEST_CASE("anyof")
-{    
+{
     CHECK(pr::anyof(pr::expect("test"), pr::expect("best"))("best"));
     CHECK(pr::anyof(pr::expect('a'), pr::expect('b'))("best"));
-    
-    CHECK(not pr::anyof(pr::expect("test"), pr::expect("best"))("rest"));
 
+    CHECK(not pr::anyof(pr::expect("test"), pr::expect("best"))("rest"));
 }
 
 TEST_CASE("repeat")
@@ -70,7 +69,7 @@ TEST_CASE("repeat")
     CHECK(pr::repeat<0, 0>(pr::expect("match"))("yep"));
     CHECK(pr::repeat<0, 0>(pr::expect("match"))("match"));
     CHECK(pr::repeat<1, 1>(pr::expect("exactly once"))("exactly once"));
-    
+
     CHECK(not pr::repeat<1>(pr::expect("at least once"))("nope"));
     CHECK(not pr::repeat<1, 1>(pr::expect("at least once"))("nope"));
 }
