@@ -8,6 +8,9 @@
 
 namespace parsi {
 
+/**
+ * A wrapper for non-owning byte stream buffer.
+ */
 class Stream {
 public:
     using buffer_type = std::span<const char>;
@@ -34,6 +37,9 @@ public:
     {
     }
 
+    /**
+     * returns a copy of this stream that is advanced forward by `count` bytes.
+     */
     [[nodicard]] constexpr auto advanced(std::size_t count) -> Stream
     {
         auto ret = Stream(_buffer);
@@ -65,24 +71,44 @@ public:
         return true;
     }
 
+    /**
+     * size of the available buffer in stream.
+     */
     [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
         return _buffer.size() - _cursor;
     }
 
+    /**
+     * size of the underlying buffer.
+     */
     [[nodiscard]] constexpr auto buffer_size() const noexcept -> std::size_t
     {
         return _buffer.size();
     }
 
+    /**
+     * an index to current position into the buffer.
+     */
     [[nodiscard]] constexpr auto cursor() const noexcept -> std::size_t
     {
         return _cursor;
     }
 
+    /**
+     * underlying buffer.
+     */
     [[nodiscard]] constexpr auto buffer() const noexcept -> buffer_type
     {
         return _buffer;
+    }
+
+    /**
+     * returns the remaining buffer span.
+     */
+    [[nodiscard]] constexpr auto remaining_buffer() const noexcept -> buffer_type
+    {
+        return _buffer.subspan(cursor());
     }
 
     [[nodiscard]] constexpr auto at(const std::size_t index) const noexcept -> const char
@@ -90,6 +116,9 @@ public:
         return _buffer[_cursor + index];
     }
 
+    /**
+     * first byte in the remainder of buffer.
+     */
     [[nodiscard]] constexpr auto front() const noexcept -> const char
     {
         return _buffer[_cursor];

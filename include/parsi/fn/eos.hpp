@@ -7,6 +7,9 @@ namespace parsi {
 
 namespace fn {
 
+/**
+ * A parser that expects the stream to have come to its end.
+ */
 struct Eos {
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
@@ -20,7 +23,10 @@ struct Eos {
 
 }  // namespace fn
 
-[[nodiscard]] constexpr auto eos() noexcept
+/**
+ * Creates a parser that expects the stream to have come to its end.
+ */
+[[nodiscard]] constexpr auto eos() noexcept -> fn::Eos
 {
     return fn::Eos{};
 }

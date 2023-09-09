@@ -7,6 +7,14 @@ namespace parsi {
 
 namespace fn {
 
+/**
+ * Combines multiple parsers in consecutive order.
+ * 
+ * It starts by passing the incoming stream to the first parser,
+ * and on success, its result stream to the second
+ * and goes on up to the last parser.
+ * If any of the parsers fail, it would return the failed result.
+ */
 template <is_parser... Fs>
 struct Sequence {
     std::tuple<std::remove_cvref_t<Fs>...> parsers;
@@ -46,10 +54,18 @@ private:
 
 }  // namespace fn
 
+/**
+ * Creates an instance of fn::Sequence;
+ * a combinator to combine multiple parsers
+ * to parse a stream sequentially and consecutively.
+ * 
+ * @see parsi::fn::Sequence
+ */
 template <is_parser... Fs>
-[[nodiscard]] constexpr auto sequence(Fs&&... parsers)
+[[nodiscard]] constexpr auto sequence(Fs&&... parsers) noexcept
+    -> fn::Sequence<std::remove_cvref_t<Fs>...>
 {
-    return fn::Sequence<Fs...>(std::forward<Fs>(parsers)...);
+    return fn::Sequence<std::remove_cvref_t<Fs>...>(std::forward<Fs>(parsers)...);
 }
 
 }  // namespace parsi

@@ -7,6 +7,16 @@ namespace parsi {
 
 namespace fn {
 
+/**
+ * A parser combinator that repeats the parser on stream
+ * for a `Min` up to `Max` times consecutively.
+ * 
+ * The parser must succeed to consecutively parse the stream
+ * for at least `Min` times and at most `Max` times,
+ * otherwise it will result in failure.
+ * 
+ * `Min` and `Max` are compile-time for optimization purposes.
+ */
 template <is_parser F, std::size_t Min = 0,
           std::size_t Max = std::numeric_limits<std::size_t>::max()>
 struct Repeated {
@@ -41,6 +51,14 @@ struct Repeated {
     }
 };
 
+/**
+ * A parser combinator that repeats the parser on stream
+ * for a range of miniumum and maximum count consecutively.
+ * 
+ * The parser must succeed to consecutively parse the stream
+ * for at least `min` times and at most `max` times,
+ * otherwise it will fail.
+ */
 template <is_parser F>
 struct RepeatedRanged {
     std::remove_cvref_t<F> parser;
@@ -77,23 +95,52 @@ struct RepeatedRanged {
 
 }  // namespace fn
 
+/**
+ * Creates a repeated parser combinator,
+ * a combinator which combines the given parser repeatedly
+ * for a given minimum and maximum times.
+ * 
+ * By default, the range is from 0 to almost infinite,
+ * expecting the parser to be repeated from none at all to any amount of times.
+ * 
+ * @see fn::Repeated
+ */
 template <std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max(),
           is_parser F>
-[[nodiscard]] constexpr auto repeat(F&& parser)
+[[nodiscard]] constexpr auto repeat(F&& parser) noexcept
+    -> fn::Repeated<std::remove_cvref_t<F>, Min, Max>
 {
-    return fn::Repeated<F, Min, Max>{std::forward<F>(parser)};
+    return fn::Repeated<std::remove_cvref_t<F>, Min, Max>{std::forward<F>(parser)};
 }
 
+/**
+ * Creates a parser that repeats the given `parser`
+ * with itself consecutively for exactly `count` times.
+ * 
+ * @see fn::RepeatedRanged
+ */
 template <is_parser F>
-[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t count)
+[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t count) noexcept
+    -> fn::RepeatedRanged<std::remove_cvref_t<F>>
 {
-    return fn::RepeatedRanged<F>{std::forward<F>(parser), count, count};
+    return fn::RepeatedRanged<std::remove_cvref_t<F>>{std::forward<F>(parser), count, count};
 }
 
+/**
+ * Creates a parser that repeats the given `parser`
+ * with itself consecutively for at least `min` times and maximum `max` times.
+ * 
+ * If the parser can successfully parse the stream consecutively
+ * within `min` and `max` range, then the parsing will be valid,
+ * otherwise parsing will fail.
+ * 
+ * @see fn::RepeatedRanged
+ */
 template <is_parser F>
-[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t min, std::size_t max)
+[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t min, std::size_t max) noexcept
+    -> fn::RepeatedRanged<std::remove_cvref_t<F>>
 {
-    return fn::RepeatedRanged<F>{std::forward<F>(parser), min, max};
+    return fn::RepeatedRanged<std::remove_cvref_t<F>>{std::forward<F>(parser), min, max};
 }
 
 }  // namespace parsi

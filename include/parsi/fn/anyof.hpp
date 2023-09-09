@@ -7,6 +7,12 @@ namespace parsi {
 
 namespace fn {
 
+/**
+ * A parser combinator where it tries the given `parsers`
+ * on the given stream and at least one of them must succeed
+ * which its result will be returned,
+ * otherwise the result of the last one to fail will be returned.
+ */
 template <is_parser... Fs>
 struct AnyOf {
     std::tuple<std::remove_cvref_t<Fs>...> parsers;
@@ -46,10 +52,18 @@ private:
 
 }  // namespace fn
 
+/**
+ * Creates a parser by combining the given `parsers`
+ * where the result of only the one that succeeds
+ * or the result of last one that fails will be returned.
+ * 
+ * @see fn::AnyOf
+ */
 template <is_parser... Fs>
-constexpr auto anyof(Fs&&... parsers)
+[[nodiscard]] constexpr auto anyof(Fs&&... parsers) noexcept
+    -> fn::AnyOf<std::remove_cvref_t<Fs>...>
 {
-    return fn::AnyOf<Fs...>(std::forward<Fs>(parsers)...);
+    return fn::AnyOf<std::remove_cvref_t<Fs>...>(std::forward<Fs>(parsers)...);
 }
 
 }  // namespace parsi
