@@ -9,8 +9,12 @@ assignees: ''
 
 ## Description
 
-### What to do?
-### Why to do?
+<!--
+The description should preferably answer the following:
+ 1. What is the current situation?
+ 2. What do we want the situation to be like?
+ 3. Optionally, Any suggestions on how to get there?
+-->
 
 ## Goals
  - for reason 1
