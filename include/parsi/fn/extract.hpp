@@ -7,6 +7,15 @@ namespace parsi {
 
 namespace fn {
 
+/**
+ * Visits the sub portion of the stream
+ * that was successfully parsed via `parser`
+ * by passing the subspan/substr to the `visitor`,
+ * and if the parser fails, the `visitor` won't be called.
+ * 
+ * The `visitor` can optionally return a boolean to indicate
+ * success or failure of the parser.
+ */
 template <is_parser F, std::invocable<std::string_view> G>
 struct Extract {
     std::remove_cvref_t<F> parser;
@@ -23,11 +32,7 @@ struct Extract {
             auto subspan = buffer.subspan(start, end - start);
             auto substr = std::string_view(subspan.data(), subspan.size());
 
-            if constexpr (requires {
-                              {
-                                  visitor(substr)
-                              } -> std::same_as<bool>;
-                          }) {
+            if constexpr (requires { { visitor(substr) } -> std::same_as<bool>; }) {
                 if (!visitor(substr)) {
                     return Result{result.stream, false};
                 }
@@ -43,10 +48,21 @@ struct Extract {
 
 }  // namespace fn
 
+/**
+ * Creates a `parser` that extracts (non-owning) the portion
+ * that was successfully parsed with the given `parser`,
+ * and passes the subspan portion to the given `visitor`.
+ * 
+ * @see fn::Extract
+ */
 template <is_parser F, std::invocable<std::string_view> G>
-[[nodiscard]] constexpr auto extract(F&& parser, G&& visitor)
+[[nodiscard]] constexpr auto extract(F&& parser, G&& visitor) noexcept
+    -> fn::Extract<std::remove_cvref_t<F>, std::remove_cvref_t<G>>
 {
-    return fn::Extract<F, G>{std::forward<F>(parser), std::forward<G>(visitor)};
+    return fn::Extract<std::remove_cvref_t<F>, std::remove_cvref_t<G>>{
+        std::forward<F>(parser),
+        std::forward<G>(visitor)
+    };
 }
 
 }  // namespace parsi

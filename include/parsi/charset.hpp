@@ -8,6 +8,10 @@
 
 namespace parsi {
 
+/**
+ * A container to hold a charset
+ * and check whether a character/byte is in the set.
+ */
 class Charset {
     internal::Bitset<256> _map;
 

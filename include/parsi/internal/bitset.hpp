@@ -12,7 +12,7 @@ namespace parsi::internal {
  */
 template <std::size_t N>
     requires(N > 0)
-struct Bitset {
+class Bitset {
     using primary_type = std::size_t;
 
     constexpr static std::size_t k_cell_bitcount = sizeof(primary_type) * 8;
@@ -21,10 +21,14 @@ struct Bitset {
 
     std::array<primary_type, k_array_size> bytes = {0};
 
+public:
     constexpr Bitset() noexcept
     {
     }
 
+    /**
+     * test whether the bit at given index is set or not.
+     */
     [[nodiscard]] constexpr auto test(const std::size_t index) const noexcept -> bool
     {
         if (index >= N) {
@@ -36,6 +40,9 @@ struct Bitset {
         return bytes[index / k_cell_bitcount] & bit;
     }
 
+    /**
+     * set the bit value at given index.
+     */
     constexpr void set(const std::size_t index, const bool value) noexcept
     {
         if (index >= N) {
