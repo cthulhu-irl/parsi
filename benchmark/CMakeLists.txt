@@ -9,6 +9,6 @@ target_link_libraries(${PROJECT_NAME}-benchmark-options
         benchmark::benchmark
         benchmark::benchmark_main)
 
-add_executable(${PROJECT_NAME}-bench-sample sample.cpp)
-target_link_libraries(${PROJECT_NAME}-bench-sample PRIVATE ${PROJECT_NAME}-benchmark-options)
+add_executable(${PROJECT_NAME}-bench-core core.cpp)
+target_link_libraries(${PROJECT_NAME}-bench-core PRIVATE ${PROJECT_NAME}-benchmark-options)
 
