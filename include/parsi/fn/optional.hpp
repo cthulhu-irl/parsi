@@ -21,7 +21,7 @@ struct Optional {
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         auto result = parser(stream);
-        if (!result) {
+        if (!result) [[unlikely]] {
             return Result{stream, true};
         }
 
