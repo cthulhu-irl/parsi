@@ -15,11 +15,9 @@ struct ExpectChar {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (!stream.starts_with(expected)) {
-            return Result{stream, false};
-        }
+        const bool starts_with = stream.starts_with(expected);
 
-        return Result{stream.advanced(1), true};
+        return Result{stream.advanced(starts_with), starts_with};
     }
 };
 
@@ -31,16 +29,13 @@ struct ExpectCharset {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (stream.size() <= 0) {
+        if (stream.size() <= 0) [[unlikely]] {
             return Result{stream, false};
         }
 
-        const char character = stream.front();
-        if (!charset.contains(character)) {
-            return Result{stream, false};
-        }
+        const bool contains = charset.contains(stream.front());
 
-        return Result{stream.advanced(1), true};
+        return Result{stream.advanced(contains), contains};
     }
 };
 
@@ -52,11 +47,9 @@ struct ExpectString {
 
     [[nodiscard]] auto operator()(Stream stream) const noexcept -> Result
     {
-        if (!stream.starts_with(expected)) {
-            return Result{stream, false};
-        }
+        const bool starts_with = stream.starts_with(expected);
 
-        return Result{stream.advanced(expected.size()), true};
+        return Result{stream.advanced(starts_with * expected.size()), starts_with};
     }
 };
 

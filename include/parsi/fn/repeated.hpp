@@ -28,26 +28,32 @@ struct Repeated {
             return Result{stream, true};
         }
 
-        Result last{stream, false};
+        std::size_t last_cursor = stream.cursor();
         std::size_t count = 0;
 
         Result result = parser(stream);
         while (result.valid) {
-            ++count;
-            last = result;
-
-            if (Max < count) {
-                break;
+            if constexpr (Min != 0 || Max != std::numeric_limits<std::size_t>::max()) {
+                ++count;
             }
 
+            if constexpr (Max != std::numeric_limits<std::size_t>::max()) {
+                if (count > Max) [[unlikely]] {
+                    break;
+                }
+            }
+
+            last_cursor = result.stream.cursor();
             result = parser(result.stream);
         }
 
-        if (count < Min || Max < count) {
-            return Result{last.stream, false};
-        }
+        stream.advance(last_cursor - stream.cursor());
 
-        return Result{last.stream, true};
+        if constexpr (Min != 0) {
+            return Result{stream, count >= Min};
+        } else {
+            return Result{stream, true};
+        }
     }
 };
 
@@ -67,7 +73,7 @@ struct RepeatedRanged {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (min > max) {
+        if (min > max) [[unlikely]] {
             return Result{stream, false};
         }
 
@@ -78,14 +84,14 @@ struct RepeatedRanged {
         while (result.valid) {
             last = result;
 
-            if (count > max) {
+            if (count > max) [[unlikely]] {
                 break;
             }
 
             result = parser(stream);
         }
 
-        if (count < min || max < count) {
+        if (count < min || max < count) [[unlikely]] {
             return Result{last.stream, false};
         }
 

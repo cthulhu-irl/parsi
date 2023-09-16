@@ -38,9 +38,17 @@ public:
     }
 
     /**
+     * advance the cursor forward by given `count`.
+     */
+    constexpr void advance(std::size_t count) noexcept
+    {
+        _cursor = _cursor + count;
+    }
+
+    /**
      * returns a copy of this stream that is advanced forward by `count` bytes.
      */
-    [[nodicard]] constexpr auto advanced(std::size_t count) -> Stream
+    [[nodicard]] constexpr auto advanced(std::size_t count) const noexcept -> Stream
     {
         auto ret = Stream(_buffer);
         ret._cursor = _cursor + count;
