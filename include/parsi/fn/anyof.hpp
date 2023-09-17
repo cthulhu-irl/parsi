@@ -24,28 +24,26 @@ struct AnyOf {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        return std::apply(
-            [stream]<typename... Ts>(Ts&&... parsers) {
-                return parse<Ts...>(stream, std::forward<Ts>(parsers)...);
-            },
-            parsers);
+        if constexpr (sizeof...(Fs) == 0) {
+            return Result{stream, true};
+        } else {
+            return parse_rec<0>(stream);
+        }
     }
 
 private:
-    template <typename First, typename... Rest>
-    [[nodiscard]] static constexpr auto parse(Stream stream, First&& first, Rest&&... rest) noexcept
-        -> Result
+    template <std::size_t I>
+        requires (I < sizeof...(Fs))
+    [[nodiscard]] constexpr auto parse_rec(Stream stream) const noexcept -> Result
     {
-        auto result = first(stream);
-        if (result) {
-            return result;
-        }
-
-        if constexpr (sizeof...(Rest) == 0) {
-            return Result{result.stream, false};
-        }
-        else {
-            return parse<Rest...>(stream, std::forward<Rest>(rest)...);
+        if constexpr (I == sizeof...(Fs)-1) {
+            return std::get<I>(parsers)(stream);
+        } else {
+            auto res = std::get<I>(parsers)(stream);
+            if (res) [[likely]] {
+                return res;
+            }
+            return parse_rec<I+1>(res.stream);
         }
     }
 };

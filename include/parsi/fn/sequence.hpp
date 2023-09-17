@@ -50,42 +50,6 @@ private:
     }
 };
 
-// template <is_parser F>
-// struct Sequence<F> {
-//     std::remove_cvref_t<F> parser;
-
-//     constexpr explicit Sequence(std::remove_cvref_t<F> parser) noexcept
-//         : parser(std::move(parser))
-//     {
-//     }
-
-//     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
-//     {
-//         return parser(stream);
-//     }
-// };
-
-// template <is_parser F, is_parser G>
-// struct Sequence<F, G> {
-//     std::remove_cvref_t<F> parser_f;
-//     std::remove_cvref_t<G> parser_g;
-
-//     constexpr explicit Sequence(std::remove_cvref_t<F> parser_1, std::remove_cvref_t<G> parser_2) noexcept
-//         : parser_f(std::move(parser_1))
-//         , parser_g(std::move(parser_2))
-//     {
-//     }
-
-//     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
-//     {
-//         auto res = parser_f(stream);
-//         if (!res) {
-//             return res;
-//         }
-//         return parser_g(res.stream);
-//     }
-// };
-
 }  // namespace fn
 
 /**

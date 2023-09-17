@@ -15,9 +15,13 @@ struct ExpectChar {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        const bool starts_with = stream.starts_with(expected);
+        if (!stream.starts_with(expected)) {
+            return Result{stream, false};
+        }
 
-        return Result{stream.advanced(starts_with), starts_with};
+        stream.advance(1);
+
+        return Result{stream, true};
     }
 };
 
@@ -33,9 +37,13 @@ struct ExpectCharset {
             return Result{stream, false};
         }
 
-        const bool contains = charset.contains(stream.front());
+        if (!charset.contains(stream.front())) {
+            return Result{stream, false};
+        }
 
-        return Result{stream.advanced(contains), contains};
+        stream.advance(1);
+
+        return Result{stream, true};
     }
 };
 

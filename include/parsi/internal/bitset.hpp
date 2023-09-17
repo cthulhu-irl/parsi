@@ -11,8 +11,9 @@ namespace parsi::internal {
  * similar to std::bitset, but constexpr friendly.
  */
 template <std::size_t N>
-    requires(N > 0)
 class Bitset {
+    static_assert(N > 0);
+
     using primary_type = std::size_t;
 
     constexpr static std::size_t k_cell_bitcount = sizeof(primary_type) * 8;
@@ -31,7 +32,7 @@ public:
      */
     [[nodiscard]] constexpr auto test(const std::size_t index) const noexcept -> bool
     {
-        if (index >= N) {
+        if (index >= N) [[unlikely]] {
             return false;
         }
 
@@ -45,7 +46,7 @@ public:
      */
     constexpr void set(const std::size_t index, const bool value) noexcept
     {
-        if (index >= N) {
+        if (index >= N) [[unlikely]] {
             return;
         }
 

@@ -57,6 +57,40 @@ struct Repeated {
     }
 };
 
+template <is_parser F>
+struct Repeated<F, 0, std::numeric_limits<std::size_t>::max()> {
+    std::remove_cvref_t<F> parser;
+
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
+    {
+        while (Result res = parser(stream)) {
+            stream = res.stream;
+        }
+        return Result{stream, true};
+    }
+};
+
+template <is_parser F>
+struct Repeated<F, 1, std::numeric_limits<std::size_t>::max()> {
+    std::remove_cvref_t<F> parser;
+
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
+    {
+        {
+            auto res = parser(stream);
+            if (!res) [[unlikely]] {
+                return res;
+            }
+            stream = res.stream;
+        }
+
+        while (Result res = parser(stream)) {
+            stream = res.stream;
+        }
+        return Result{stream, true};
+    }
+};
+
 /**
  * A parser combinator that repeats the parser on stream
  * for a range of miniumum and maximum count consecutively.
