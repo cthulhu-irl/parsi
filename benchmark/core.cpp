@@ -1,3 +1,5 @@
+#include <format>
+
 #include <benchmark/benchmark.h>
 
 #include <parsi/parsi.hpp>
@@ -37,6 +39,40 @@ constexpr auto parsi_parser = parsi::sequence(
 );
 
 constexpr auto ctre_parser = ctre::match<R"(^\[\s*(([0-9]+|[A-Za-z_]+[A-Za-z0-9_]*)\s*(,\s*([0-9]+|[A-Za-z_]+[A-Za-z0-9_]*)\s*)*)?\]$)">;
+
+static void bench_digits(benchmark::State& state, auto&& parser)
+{
+    std::string str;
+    str.reserve(1'000'000);
+    for (std::size_t i = 0; i < str.capacity(); ++i) {
+        str += '9' - (i % 10);
+    }
+
+    std::size_t bytes_count = 0;
+
+    for (auto _ : state) {
+        auto res = parser(str.c_str());
+        benchmark::DoNotOptimize(res);
+
+        state.PauseTiming();
+        bytes_count += str.size();
+        state.ResumeTiming();
+    }
+
+    state.SetBytesProcessed(bytes_count);
+}
+BENCHMARK_CAPTURE(bench_digits, raw, [digits_charset=parsi::Charset("0123456789")](parsi::Stream stream) {
+    std::size_t index = 0;
+
+    while (index < stream.size() && digits_charset.contains(stream.at(index))) {
+        ++index;
+    }
+
+    return parsi::Result{stream.advanced(index), true};
+});
+BENCHMARK_CAPTURE(bench_digits, parsi, parsi::repeat(parsi::expect(parsi::Charset("0123456789"))));
+BENCHMARK_CAPTURE(bench_digits, ctre, ctre::match<R"(^[0-9]*)">);
+
 
 static void bench_empty_string(benchmark::State& state, auto&& parser)
 {
@@ -81,25 +117,34 @@ static void bench_late_failure(benchmark::State& state, auto&& parser)
 BENCHMARK_CAPTURE(bench_late_failure, parsi, parsi_parser);
 BENCHMARK_CAPTURE(bench_late_failure, ctre, ctre_parser);
 
-
 static void bench_many_items(benchmark::State& state, auto&& parser)
 {
-    std::string str;
-    str.reserve(state.range(0) * 15);
+    auto str = [&state]() {
+        std::string ret;
+        ret.reserve(state.range(0) * 20);
+        ret += '[';
+        for (std::size_t i=0; i < state.range(0); ++i) {
+            ret += "1234567890,   test,";
+        }
+        ret += "1";
+        ret += ']';
+        return ret;
+    }();
 
-    str += '[';
-    for (std::size_t i=0; i < state.range(0); ++i) {
-        str += "1234567890, best   ,";
-    }
-    str += "1234565";
-    str += ']';
+    std::size_t bytes_count = 0;
 
     for (auto _ : state) {
         auto res = parser(str.c_str());
         benchmark::DoNotOptimize(&res);
+
+        state.PauseTiming();
+        bytes_count += str.size();
+        state.ResumeTiming();
     }
+
+    state.SetBytesProcessed(bytes_count);
 }
-BENCHMARK_CAPTURE(bench_many_items, parsi, parsi_parser)->RangeMultiplier(10)->Range(1, 10'000);
-BENCHMARK_CAPTURE(bench_many_items, ctre, ctre_parser)->RangeMultiplier(10)->Range(1, 10'000);
+BENCHMARK_CAPTURE(bench_many_items, parsi, parsi_parser)->RangeMultiplier(10)->Range(1, 100'000'000);
+BENCHMARK_CAPTURE(bench_many_items, ctre, ctre_parser)->RangeMultiplier(10)->Range(1, 100'000'000);
 
 BENCHMARK_MAIN();

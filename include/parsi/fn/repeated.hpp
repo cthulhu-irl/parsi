@@ -20,6 +20,8 @@ namespace fn {
 template <is_parser F, std::size_t Min = 0,
           std::size_t Max = std::numeric_limits<std::size_t>::max()>
 struct Repeated {
+    static_assert(Min <= Max, "Min cannot be greater than Max.");
+
     std::remove_cvref_t<F> parser;
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
@@ -28,66 +30,34 @@ struct Repeated {
             return Result{stream, true};
         }
 
-        std::size_t last_cursor = stream.cursor();
+        return apply_loop(parser, stream);
+    }
+
+private:
+    /// the generic/general unspecialized loop. 
+    [[nodiscard]] static constexpr auto apply_loop(const auto& parser, Stream stream) noexcept -> Result
+    {
         std::size_t count = 0;
 
-        Result result = parser(stream);
-        while (result.valid) {
+        while (const Result result = parser(stream)) {
             if constexpr (Min != 0 || Max != std::numeric_limits<std::size_t>::max()) {
                 ++count;
             }
 
             if constexpr (Max != std::numeric_limits<std::size_t>::max()) {
                 if (count > Max) [[unlikely]] {
-                    break;
+                    return Result{stream, false};
                 }
             }
 
-            last_cursor = result.stream.cursor();
-            result = parser(result.stream);
+            stream.advance(result.stream.cursor() - stream.cursor());
         }
 
-        stream.advance(last_cursor - stream.cursor());
-
         if constexpr (Min != 0) {
-            return Result{stream, count >= Min};
+            return Result{stream, Min <= count};
         } else {
             return Result{stream, true};
         }
-    }
-};
-
-template <is_parser F>
-struct Repeated<F, 0, std::numeric_limits<std::size_t>::max()> {
-    std::remove_cvref_t<F> parser;
-
-    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
-    {
-        while (Result res = parser(stream)) {
-            stream = res.stream;
-        }
-        return Result{stream, true};
-    }
-};
-
-template <is_parser F>
-struct Repeated<F, 1, std::numeric_limits<std::size_t>::max()> {
-    std::remove_cvref_t<F> parser;
-
-    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
-    {
-        {
-            auto res = parser(stream);
-            if (!res) [[unlikely]] {
-                return res;
-            }
-            stream = res.stream;
-        }
-
-        while (Result res = parser(stream)) {
-            stream = res.stream;
-        }
-        return Result{stream, true};
     }
 };
 
@@ -111,25 +81,21 @@ struct RepeatedRanged {
             return Result{stream, false};
         }
 
-        Result last;
         std::size_t count = 0;
 
-        auto result = parser(stream);
-        while (result.valid) {
-            last = result;
-
+        while (const Result result = parser(stream)) {
             if (count > max) [[unlikely]] {
                 break;
             }
 
-            result = parser(stream);
+            stream = result.stream;
         }
 
         if (count < min || max < count) [[unlikely]] {
-            return Result{last.stream, false};
+            return Result{stream, false};
         }
 
-        return Result{last.stream, true};
+        return Result{stream, true};
     }
 };
 
