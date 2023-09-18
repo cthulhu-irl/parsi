@@ -3,6 +3,7 @@
   "version-semver": "0.0.0",
   "dependencies": [
     "catch2",
-    "benchmark"
+    "benchmark",
+    "ctre"
   ]
 }

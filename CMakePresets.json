@@ -13,7 +13,7 @@
             "installDir": "${sourceDir}/install/${presetName}",
             "generator": "Ninja",
             "cacheVariables": {
-                "CMAKE_CONFIGURATION_TYPES": "Debug;Release"
+                "CMAKE_CONFIGURATION_TYPES": "Debug;Release;RelWithDebInfo"
             },
             "environment": {
                 "VCPKG_ROOT": "$penv{VCPKG_ROOT}"
