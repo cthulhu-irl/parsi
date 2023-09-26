@@ -42,8 +42,11 @@ html_theme = 'sphinx_rtd_theme'
 # Breathe Configuration
 breathe_default_project = project
 
-project_dir = os.path.abspath(os.path.join(os.getcwd(), ".."))
-header_files = glob(os.path.join(f"{project_dir}/include/**/*.hpp"), recursive=True)
+def to_unix_path(path):
+    return path if os.name == "Linux" else path.replace("\\", "/")
+
+project_dir = to_unix_path(os.path.abspath(os.path.join(os.getcwd(), "..")))
+header_files = list(map(to_unix_path, glob(os.path.join(f"{project_dir}/include/**/*.hpp"), recursive=True)))
 breathe_projects_source = {
     project: ('include', list(map(lambda path: path.removeprefix(f"{project_dir}/include"), header_files)))
 }
@@ -61,9 +64,9 @@ with open(f"{base_path}/index.rst", "w") as index_file:
     index_file.write("   :maxdepth: 1\n\n")
 
     for header_filepath in header_files:
-        filepath = header_filepath.removeprefix(f"{project_dir}/include\\")
-        header_file_rst_name = filepath.removesuffix(".hpp").replace("\\", "__")
-        header_file_doxy_path = filepath.replace("\\", "/")
+        filepath = header_filepath.removeprefix(f"{project_dir}/include/")
+        header_file_rst_name = filepath.removesuffix(".hpp").replace("/", "__")
+        header_file_doxy_path = filepath
 
         index_file.write(f"   {header_file_rst_name}\n")
 
