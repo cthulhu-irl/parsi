@@ -1,4 +1,5 @@
 /build/
+/docs/api
 
 # Prerequisites
 *.d
