@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  build-test-docs:
     strategy:
       fail-fast: true
       matrix:
@@ -20,8 +20,9 @@ jobs:
       - name: Install System Packages
         run: |
           sudo apt-get update
-          sudo apt-get install build-essential cmake ninja-build python3 python3-pip
+          sudo apt-get install build-essential cmake ninja-build python3 python3-pip doxygen
           sudo pip3 install gcovr
+          sudo pip3 install -r docs/requirements.txt
 
       - name: Setup vcpkg
         working-directory: /opt
@@ -43,7 +44,7 @@ jobs:
         env:
           VCPKG_ROOT: /opt/vcpkg
           VCPKG_DEFAULT_BINARY_CACHE: /opt/vcpkg-binary-cache
-        run: cmake -S . --preset ${{matrix.config.preset}} -DPARSI_ENABLE_COVERAGE=ON
+        run: cmake -S . --preset ${{matrix.config.preset}} -DPARSI_ENABLE_COVERAGE=ON -DPARSI_DOCS=ON
 
       - name: Build Debug
         run: |
@@ -68,3 +69,29 @@ jobs:
           files: build/${{matrix.config.preset}}/coverage/coverage.xml
           fail_ci_if_error: true
           functionalities: fix
+
+      - name: Build Docs
+        run: |
+          cmake --build --preset ${{matrix.config.preset}} --target docs
+          mv build/${{matrix.config.preset}}/docs/sphinx _site
+
+      - name: Upload Pages Artifacts
+        uses: actions/upload-pages-artifact@v2
+
+  deploy-docs:
+    if: success() && github.ref == 'refs/heads/main'
+    needs: build-test-docs
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{steps.deployment.outputs.page_url}}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2 
