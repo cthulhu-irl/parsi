@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
 
 namespace parsi::internal {
 
@@ -17,14 +18,18 @@ class Bitset {
     using primary_type = std::size_t;
 
     constexpr static std::size_t k_cell_bitcount = sizeof(primary_type) * 8;
-    constexpr static std::size_t k_array_size =
-        (N < k_cell_bitcount) ? (N / k_cell_bitcount) : k_cell_bitcount;
+    constexpr static std::size_t k_array_size = std::max(N / k_cell_bitcount, k_cell_bitcount);
 
-    std::array<primary_type, k_array_size> bytes = {0};
+    std::array<primary_type, k_array_size> _bytes = {0};
 
 public:
     constexpr Bitset() noexcept
     {
+    }
+    
+    [[nodiscard]] constexpr auto as_byte_span() const noexcept -> std::span<const primary_type, k_array_size>
+    {
+        return _bytes;
     }
 
     /**
@@ -38,7 +43,7 @@ public:
 
         const auto bit = 1ull << static_cast<primary_type>(index % k_cell_bitcount);
 
-        return bytes[index / k_cell_bitcount] & bit;
+        return _bytes[index / k_cell_bitcount] & bit;
     }
 
     /**
@@ -53,10 +58,52 @@ public:
         const auto bit = 1ull << static_cast<primary_type>(index % k_cell_bitcount);
 
         if (value) {
-            bytes[index / k_cell_bitcount] |= bit;
+            _bytes[index / k_cell_bitcount] |= bit;
         }
         else {
-            bytes[index / k_cell_bitcount] &= ~bit;
+            _bytes[index / k_cell_bitcount] &= ~bit;
+        }
+    }
+
+    template <std::size_t M>
+    constexpr void set(const Bitset<M>& other) noexcept
+    {
+        static_assert(M <= N, "given bitset is a larger set.");
+
+        auto other_bytes = other.as_byte_span();
+        for (std::size_t index = 0; index < std::size(other_bytes); ++index) {
+            _bytes[index] |= other_bytes[index];
+        }
+    }
+
+    template <std::size_t M>
+    [[nodiscard]] constexpr auto joined(const Bitset<M>& other) const noexcept -> Bitset<std::max(N, M)>
+    {
+        Bitset<std::max(N, M)> bitset;
+
+        bitset.set(*this);
+        bitset.set(other);
+
+        return bitset;
+    }
+
+    template <std::size_t M>
+    [[nodiscard]] friend constexpr bool operator==(const Bitset& lhs, const Bitset<M>& rhs) noexcept
+    {
+        if constexpr (N != M) {
+            return false;
+        } else {
+            return lhs._bytes == rhs._bytes;
+        }
+    }
+
+    template <std::size_t M>
+    [[nodiscard]] friend constexpr bool operator!=(const Bitset& lhs, const Bitset<M>& rhs) noexcept
+    {
+        if constexpr (N != M) {
+            return true;
+        } else {
+            return lhs._bytes != rhs._bytes;
         }
     }
 };
