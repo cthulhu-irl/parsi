@@ -16,6 +16,8 @@ class Charset {
     internal::Bitset<256> _map;
 
 public:
+    constexpr Charset() noexcept {}
+
     constexpr explicit Charset(const char* charset) noexcept
     {
         for (std::size_t index = 0; charset[index] != '\0'; ++index) {
@@ -58,6 +60,21 @@ public:
     {
         return _map.test(static_cast<std::size_t>(character));
     }
+
+    [[nodiscard]] constexpr auto joined(const Charset& other) const noexcept -> Charset
+    {
+        Charset ret;
+        ret._map = _map.joined(other._map);
+        return ret;
+    }
+
+    [[nodiscard]] friend constexpr auto operator+(const parsi::Charset& lhs, const parsi::Charset& rhs) noexcept -> Charset
+    {
+        return lhs.joined(rhs);
+    }
+
+    [[nodiscard]] friend constexpr bool operator==(const parsi::Charset&, const parsi::Charset&) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator!=(const parsi::Charset&, const parsi::Charset&) noexcept = default;
 };
 
 }  // namespace parsi

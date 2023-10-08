@@ -48,3 +48,26 @@ TEST_CASE("Charset-CharArray")
         CHECK(charset.contains('B'));
     }
 }
+
+TEST_CASE("Charset-Combination")
+{
+    constexpr auto numeric = parsi::Charset("0123456789");
+    constexpr auto lowercase = parsi::Charset("abcdefghijklmnopqrstuvwxyz");
+    constexpr auto uppercase = parsi::Charset("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+    constexpr auto alphabetic = parsi::Charset("abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    constexpr auto alphanumeric = parsi::Charset("0123456789" "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+    SECTION("joined monoid identity")
+    {
+        CHECK(parsi::Charset().joined(parsi::Charset()) == parsi::Charset());
+        CHECK(parsi::Charset().joined(numeric) == numeric);
+    }
+
+    SECTION("joined overlap")
+    {
+        CHECK(numeric.joined(numeric) == numeric);
+        CHECK(lowercase.joined(uppercase) == alphabetic);
+        CHECK(numeric.joined(lowercase).joined(uppercase) == alphanumeric);
+    }
+}
