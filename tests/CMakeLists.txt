@@ -7,6 +7,7 @@ target_sources(${PROJECT_NAME}-tests
         parsers.cpp
         bitset.cpp
         charset.cpp
+        regex.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}-tests
