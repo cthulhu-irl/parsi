@@ -71,3 +71,31 @@ TEST_CASE("Charset-Combination")
         CHECK(numeric.joined(lowercase).joined(uppercase) == alphanumeric);
     }
 }
+
+TEST_CASE("Charset-Opposite")
+{
+    // constexpr auto non_numeric = parsi::Charset("0123456789").opposite();
+    
+    auto numeric = parsi::Charset("0123456789");
+    auto non_numeric = numeric.opposite();
+
+    CHECK(numeric != non_numeric);
+
+    CHECK(!non_numeric.contains('0'));
+    CHECK(!non_numeric.contains('1'));
+    CHECK(!non_numeric.contains('2'));
+    CHECK(!non_numeric.contains('3'));
+    CHECK(!non_numeric.contains('4'));
+    CHECK(!non_numeric.contains('5'));
+    CHECK(!non_numeric.contains('6'));
+    CHECK(!non_numeric.contains('7'));
+    CHECK(!non_numeric.contains('8'));
+    CHECK(!non_numeric.contains('9'));
+
+    CHECK(non_numeric.contains('\0'));
+    CHECK(non_numeric.contains('A'));
+    CHECK(non_numeric.contains('@'));
+    CHECK(non_numeric.contains('\n'));
+    CHECK(non_numeric.contains('\r'));
+    CHECK(non_numeric.contains('\255'));
+}

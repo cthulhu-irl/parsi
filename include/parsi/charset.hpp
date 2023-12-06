@@ -16,7 +16,9 @@ class Charset {
     internal::Bitset<256> _map;
 
 public:
-    constexpr Charset() noexcept {}
+    constexpr Charset() noexcept
+    {
+    }
 
     constexpr explicit Charset(const char* charset) noexcept
     {
@@ -68,13 +70,24 @@ public:
         return ret;
     }
 
-    [[nodiscard]] friend constexpr auto operator+(const parsi::Charset& lhs, const parsi::Charset& rhs) noexcept -> Charset
+    /** make a charset that matches any character except the currently set characters. */
+    [[nodiscard]] constexpr auto opposite() const noexcept -> Charset
+    {
+        Charset ret = *this;
+        ret._map = ret._map.negated();
+        return ret;
+    }
+
+    [[nodiscard]] friend constexpr auto operator+(const parsi::Charset& lhs,
+                                                  const parsi::Charset& rhs) noexcept -> Charset
     {
         return lhs.joined(rhs);
     }
 
-    [[nodiscard]] friend constexpr bool operator==(const parsi::Charset&, const parsi::Charset&) noexcept = default;
-    [[nodiscard]] friend constexpr bool operator!=(const parsi::Charset&, const parsi::Charset&) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(const parsi::Charset&,
+                                                   const parsi::Charset&) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator!=(const parsi::Charset&,
+                                                   const parsi::Charset&) noexcept = default;
 };
 
 }  // namespace parsi

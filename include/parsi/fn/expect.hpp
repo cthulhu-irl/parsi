@@ -12,16 +12,13 @@ namespace fn {
  */
 struct ExpectChar {
     char expected;
+    bool negate = false;
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (!stream.starts_with(expected)) {
-            return Result{stream, false};
-        }
-
-        stream.advance(1);
-
-        return Result{stream, true};
+        const bool is_valid = negate ^ stream.starts_with(expected);
+        stream.advance(is_valid);
+        return Result{stream, is_valid};
     }
 };
 
@@ -82,6 +79,15 @@ struct ExpectString {
 }
 
 /**
+ * Creates a parser that expects the stream to start with the given character.
+ */
+[[nodiscard]] constexpr auto expect_not(char expected) noexcept
+    -> fn::ExpectChar
+{
+    return fn::ExpectChar{ .expected = expected, .negate = true };
+}
+
+/**
  * Creates a parser that expects the stream to
  * start with a character the is in the given charset.
  */
@@ -89,6 +95,16 @@ struct ExpectString {
     -> fn::ExpectCharset
 {
     return fn::ExpectCharset{expected};
+}
+
+/**
+ * Creates a parser that expects the stream to
+ * start with a character the is in the given charset.
+ */
+[[nodiscard]] constexpr auto expect_not(Charset expected) noexcept
+    -> fn::ExpectCharset
+{
+    return fn::ExpectCharset{expected.opposite()};
 }
 
 }  // namespace parsi

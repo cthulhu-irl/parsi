@@ -93,4 +93,39 @@ TEST_CASE("Bitset")
 
         CHECK(joined_bitset == bitset_b.joined(bitset_a));
     }
+
+    SECTION("negated bits")
+    {
+        auto bitset = parsi::internal::Bitset<64>{};
+        bitset.set(0, true);
+        bitset.set(1, true);
+        bitset.set(42, true);
+
+        auto bitset_negated = bitset.negated();
+
+        CHECK(!bitset_negated.test(0));
+        CHECK(!bitset_negated.test(1));
+        CHECK(!bitset_negated.test(42));
+
+        CHECK(bitset_negated.test(2));
+        CHECK(bitset_negated.test(3));
+        CHECK(bitset_negated.test(5));
+        CHECK(bitset_negated.test(10));
+        CHECK(bitset_negated.test(43));
+        CHECK(bitset_negated.test(53));
+        CHECK(bitset_negated.test(63));
+    }
+
+    SECTION("negate in-place modifier")
+    {
+        auto bitset = parsi::internal::Bitset<64>{};
+        bitset.set(0, true);
+        bitset.set(1, true);
+        bitset.set(42, true);
+
+        auto bitset_copy_negate = bitset;
+        bitset_copy_negate.negate();
+
+        CHECK(bitset.negated() == bitset_copy_negate);
+    }
 }

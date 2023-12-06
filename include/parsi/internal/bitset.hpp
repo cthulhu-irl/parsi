@@ -18,7 +18,7 @@ class Bitset {
     using primary_type = std::size_t;
 
     constexpr static std::size_t k_cell_bitcount = sizeof(primary_type) * 8;
-    constexpr static std::size_t k_array_size = std::max(N / k_cell_bitcount, k_cell_bitcount);
+    constexpr static std::size_t k_array_size = N / k_cell_bitcount + (N % k_cell_bitcount != 0);
 
     std::array<primary_type, k_array_size> _bytes = {0};
 
@@ -85,6 +85,26 @@ public:
         bitset.set(other);
 
         return bitset;
+    }
+    
+    /** bit flips all the set bits to false and all the not set bits to true. */
+    constexpr void negate() noexcept
+    {
+        // NOTE: it also negates the out of bounds bits
+        //       at the last cell which its bit count exceed `N`.
+        //       it shouldn't be a problem as long as `test` method
+        //       checks for `index >= N` and always returns false for that case.
+        for (auto& cell : _bytes) {
+            cell = ~cell;
+        }
+    }
+
+    /** bit flips all the set bits to false and all the not set bits to true. */
+    [[nodiscard]] constexpr auto negated() const noexcept -> Bitset
+    {
+        Bitset ret = *this;
+        ret.negate();
+        return ret;
     }
 
     template <std::size_t M>
