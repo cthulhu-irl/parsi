@@ -28,6 +28,19 @@ TEST_CASE("expect")
     CHECK(not pr::expect(pr::Charset("abcd"))("h"));
 }
 
+TEST_CASE("expect_not")
+{
+    CHECK(pr::expect_not('a')("ba"));
+    CHECK(not pr::expect_not('a')("ab"));
+
+    CHECK(pr::expect_not(pr::Charset("abcd"))("A"));
+    CHECK(pr::expect_not(pr::Charset("abcd"))("@"));
+    CHECK(not pr::expect_not(pr::Charset("abcd"))("a"));
+    CHECK(not pr::expect_not(pr::Charset("abcd"))("b"));
+    CHECK(not pr::expect_not(pr::Charset("abcd"))("c"));
+    CHECK(not pr::expect_not(pr::Charset("abcd"))("d"));
+}
+
 TEST_CASE("eos")
 {
     CHECK(pr::eos()(""));
