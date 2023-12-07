@@ -16,7 +16,7 @@ struct ExpectChar {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        const bool is_valid = negate ^ stream.starts_with(expected);
+        const bool is_valid = (stream.size() > 0) & (negate ^ stream.starts_with(expected));
         stream.advance(is_valid);
         return Result{stream, is_valid};
     }
