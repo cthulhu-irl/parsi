@@ -84,8 +84,7 @@ cmake --build build
 ### Roadmap
 
  - [x] core: base types, parsers, and combinators (Stream, Result, expect, sequence, anyof, etc.)
- - [ ] core: runtime friendly api (polymorphism)
+ - [x] core: runtime friendly api (polymorphism)
  - [ ] extra: json
  - [ ] extra: msgpack
- - [ ] core: parallelization
  - [ ] extra: toml
