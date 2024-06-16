@@ -2,6 +2,7 @@
 #define PARSI_PARSI_HPP
 
 #include "parsi/base.hpp"
+#include "parsi/rtparser.hpp"
 #include "parsi/charset.hpp"
 #include "parsi/fn/anyof.hpp"
 #include "parsi/fn/eos.hpp"
