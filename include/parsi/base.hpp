@@ -2,6 +2,7 @@
 #define PARSI_BASE_HPP
 
 #include <concepts>
+#include <cstring>
 #include <span>
 #include <string_view>
 #include <utility>
