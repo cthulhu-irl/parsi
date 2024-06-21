@@ -1,6 +1,10 @@
 #ifndef PARSI_FN_EXTRACT_HPP
 #define PARSI_FN_EXTRACT_HPP
 
+#include <concepts>
+#include <type_traits>
+#include <utility>
+
 #include "parsi/base.hpp"
 
 namespace parsi {
