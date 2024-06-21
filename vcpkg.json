@@ -1,9 +1,14 @@
 {
   "name": "parsi",
   "version-semver": "0.0.0",
-  "dependencies": [
-    "catch2",
-    "benchmark",
-    "ctre"
-  ]
+  "features": {
+    "tests": {
+      "description": "development tests",
+      "dependencies": ["catch2"]
+    },
+    "benchmark": {
+      "description": "development benchmarks",
+      "dependencies": ["benchmark", "ctre"]
+    }
+  }
 }

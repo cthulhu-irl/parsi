@@ -8,9 +8,7 @@ if (NOT DEFINED PARSI_MAIN_PROJECT)
     endif()
 endif()
 
-project(parsi
-    DESCRIPTION "lightweight parser combinator"
-    LANGUAGES CXX)
+include(CMakeDependentOption)
 
 option(PARSI_TESTS "build tests" ${PARSI_MAIN_PROJECT})
 option(PARSI_ENABLE_COVERAGE "enable code coverage" OFF)
@@ -18,6 +16,21 @@ option(PARSI_DOCS "build docs" OFF)
 option(PARSI_EXAMPLES "build examples" ${PARSI_MAIN_PROJECT})
 option(PARSI_BENCHMARK "build benchmarks" OFF)
 option(PARSI_INSTALL "generate install configs" ${PARSI_MAIN_PROJECT})
+cmake_dependent_option(PARSI_BUILD_PACKAGE_DEB "create deb package" OFF "PARSI_INSTALL" OFF)
+cmake_dependent_option(PARSI_BUILD_PACKAGE_RPM "create rpm package" OFF "PARSI_INSTALL" OFF)
+
+if (PARSI_TESTS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
+
+if (PARSI_BENCHMARK)
+    list(APPEND VCPKG_MANIFEST_FEATURES "benchmark")
+endif()
+
+project(parsi
+    DESCRIPTION "lightweight parser combinator"
+    LANGUAGES CXX
+    VERSION 0.0.0)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -90,6 +103,56 @@ if (PARSI_BENCHMARK)
 endif()
 
 if (PARSI_INSTALL)
-    # TODO
-endif()
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
+    include(CMakeDependentOption)
 
+    configure_package_config_file(
+        "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in"
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+        INSTALL_DESTINATION "share/cmake/${PROJECT_NAME}")
+
+    write_basic_package_version_file(
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+        COMPATIBILITY SameMajorVersion
+        ARCH_INDEPENDENT)
+
+    install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}-options
+        EXPORT ${PROJECT_NAME}-targets
+        INCLUDES DESTINATION "${CMAKE_INSTALL_DATADIR}")
+
+    install(EXPORT ${PROJECT_NAME}-targets
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME}"
+        NAMESPACE parsi::
+        FILE "${PROJECT_NAME}-targets.cmake")
+
+    install(FILES
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME}")
+
+    install(DIRECTORY "include/" TYPE INCLUDE)
+
+    list(APPEND source_generators TGZ TXZ ZIP)
+    list(APPEND binary_generators TGZ ZIP)
+
+    if (CMAKE_HOST_WIN32)
+        list(APPEND binary_generators "WIX")
+    endif()
+    if (PARSI_BUILD_PACKAGE_DEB)
+        list(APPEND binary_generators "DEB")
+    endif()
+    if (PARSI_BUILD_PACKAGE_RPM)
+        list(APPEND binary_generators "RPM")
+    endif()
+
+    set(CPACK_SOURCE_GENERATOR ${source_generators})
+    set(CPACK_GENERATOR ${binary_generators})
+    set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}")
+    set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-source")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mohsen Mirkarimi")
+
+    list(APPEND CPACK_SOURCE_IGNORE_FILES /.git/ /.vscode/ /build/ .gitignore .DS_Store)
+
+    include(CPack)
+endif()
