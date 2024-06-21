@@ -1,6 +1,10 @@
 #ifndef PARSI_FN_SEQUENCE_HPP
 #define PARSI_FN_SEQUENCE_HPP
 
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
 #include "parsi/base.hpp"
 
 namespace parsi {

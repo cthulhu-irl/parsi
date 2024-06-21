@@ -1,6 +1,10 @@
 #ifndef PARSI_FN_REPEATED_HPP
 #define PARSI_FN_REPEATED_HPP
 
+#include <limits>
+#include <type_traits>
+#include <utility>
+
 #include "parsi/base.hpp"
 
 namespace parsi {

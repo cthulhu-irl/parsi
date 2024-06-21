@@ -1,6 +1,9 @@
 #ifndef PARSI_FN_OPTIONAL_HPP
 #define PARSI_FN_OPTIONAL_HPP
 
+#include <type_traits>
+#include <utility>
+
 #include "parsi/base.hpp"
 
 namespace parsi {

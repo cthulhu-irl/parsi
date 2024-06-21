@@ -1,6 +1,8 @@
 #ifndef PARSI_FN_EXPECT_HPP
 #define PARSI_FN_EXPECT_HPP
 
+#include <string>
+
 #include "parsi/base.hpp"
 
 namespace parsi {

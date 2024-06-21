@@ -1,6 +1,10 @@
 #ifndef PARSI_FN_ANYOF_HPP
 #define PARSI_FN_ANYOF_HPP
 
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
 #include "parsi/base.hpp"
 
 namespace parsi {
