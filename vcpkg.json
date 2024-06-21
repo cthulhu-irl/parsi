@@ -1,6 +1,6 @@
 {
   "name": "parsi",
-  "version-semver": "0.0.0",
+  "version-semver": "0.1.0",
   "features": {
     "tests": {
       "description": "development tests",
