@@ -73,6 +73,54 @@ constexpr auto color_from_string(std::string_view str) -> std::optional<Color>
 }
 ```
 
+### Installation/Dependency
+
+#### CMake System Install
+
+Configure, build, and install from the terminal:
+```bash
+cmake -S . -B build
+cmake --build build
+cmake --install build --prefix /usr/local
+```
+
+Then just find package and link against `parsi::parsi`:
+```cmake
+find_package(parsi CONFIG REQUIRED)
+target_link_libraries(main PRIVATE parsi::parsi)
+```
+
+#### CMake FetchContent
+
+In CMakeLists.txt:
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+    parsi
+    GIT_REPOSITORY https://github.com/cthulhu-irl/parsi
+    GIT_TAG main  # or v<version> like v0.1.0
+)
+FetchContent_MakeAvailable(parsi)
+
+target_link_libraries(your-target PRIVATE parsi::parsi)
+```
+
+#### vcpkg
+
+Simply install and link against it.
+
+bash:
+```bash
+vcpkg install parsi
+```
+
+CMakeLists.txt:
+```cmake
+find_package(parsi CONFIG REQUIRED)
+target_link_libraries(your-target PRIVATE parsi::parsi)
+```
+
 ### Building Examples
 
 Example executables will be built with `example_` prefix into the `bin/` directory:
@@ -85,6 +133,8 @@ cmake --build build
 
  - [x] core: base types, parsers, and combinators (Stream, Result, expect, sequence, anyof, etc.)
  - [x] core: runtime friendly api (polymorphism)
+ - [ ] core: inline parsing (parse on call instead of creating a parser to be called later)
+ - [ ] core: optimized parsers for static and fixed length strings 
  - [ ] extra: json
  - [ ] extra: msgpack
  - [ ] extra: toml
