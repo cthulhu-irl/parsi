@@ -8,6 +8,7 @@ target_sources(${PROJECT_NAME}-tests
         bitset.cpp
         charset.cpp
         rtparser.cpp
+        fixed_string.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}-tests

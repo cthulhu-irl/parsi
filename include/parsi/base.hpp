@@ -49,14 +49,14 @@ public:
     /**
      * returns a copy of this stream that is advanced forward by `count` bytes.
      */
-    [[nodicard]] constexpr auto advanced(std::size_t count) const noexcept -> Stream
+    [[nodiscard]] constexpr auto advanced(std::size_t count) const noexcept -> Stream
     {
         auto ret = Stream(_buffer);
         ret._cursor = _cursor + count;
         return ret;
     }
 
-    [[nodicard]] constexpr auto starts_with(const char character) const noexcept -> bool
+    [[nodiscard]] constexpr auto starts_with(const char character) const noexcept -> bool
     {
         if (_cursor >= _buffer.size()) [[unlikely]] {
             return false;
@@ -65,7 +65,7 @@ public:
         return character == _buffer[_cursor];
     }
 
-    [[nodicard]] constexpr auto starts_with(std::span<const char> span) const noexcept -> bool
+    [[nodiscard]] constexpr auto starts_with(std::span<const char> span) const noexcept -> bool
     {
         if (size() < span.size()) {
             return false;

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "parsi/base.hpp"
+#include "parsi/fixed_string.hpp"
 
 namespace parsi {
 
@@ -46,6 +47,19 @@ struct ExpectCharset {
     }
 };
 
+template <std::size_t SizeV, typename CharT = const char>
+struct ExpectFixedString {
+    FixedString<SizeV, CharT> expected;
+
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
+    {
+        const auto expected_strview = expected.as_string_view();
+        const bool starts_with = stream.starts_with(expected_strview);
+
+        return Result{stream.advanced(starts_with * expected_strview.size()), starts_with};
+    }
+};
+
 /**
  * A parser that expects the stream to start with the given string.
  */
@@ -61,6 +75,28 @@ struct ExpectString {
 };
 
 }  // namespace fn
+
+/**
+ * Creates a parser that expects the stream to start with the given fixed string.
+ * Parser's expected string is fixed and cannot be changed. better performance for string literals.
+ */
+template <std::size_t SizeV>
+[[nodiscard]] constexpr auto expect(const char (&str)[SizeV]) noexcept
+    -> fn::ExpectFixedString<SizeV, const char>
+{
+    return fn::ExpectFixedString<SizeV, const char>{FixedString<SizeV, const char>::make(str, SizeV).value()};
+}
+
+/**
+ * Creates a parser that expects the stream to start with the given fixed string.
+ * Parser's expected string is fixed and cannot be changed. better performance for string literals.
+ */
+template <std::size_t SizeV, typename CharT = const char>
+[[nodiscard]] constexpr auto expect(FixedString<SizeV, CharT> expected) noexcept
+    -> fn::ExpectFixedString<SizeV, CharT>
+{
+    return fn::ExpectFixedString<SizeV, CharT>{expected};
+}
 
 /**
  * Creates a parser that expects the stream to start with the given string.
