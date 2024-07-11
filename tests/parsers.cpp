@@ -6,6 +6,9 @@ namespace pr = parsi;
 
 TEST_CASE("expect")
 {
+    CHECK(pr::expect("abcd")("abcd"));
+    CHECK(pr::expect(pr::FixedString("abcd"))("abcd"));
+
     CHECK(pr::expect("")(""));
     CHECK(pr::expect("exactly")("exactly"));
     CHECK(pr::expect("starting")("starting and going"));
@@ -30,6 +33,16 @@ TEST_CASE("expect")
     CHECK(not pr::expect("test")(""));
     CHECK(not pr::expect('a')(""));
     CHECK(not pr::expect(pr::Charset("abcd"))(""));
+}
+
+TEST_CASE("expect dynamic string")
+{
+    std::string str = "abcd";
+    CHECK(pr::expect(str)("abcd"));
+
+    CHECK(pr::expect(std::string("abcd"))("abcd"));
+
+    CHECK(not pr::expect(std::string("abcd"))("abc"));
 }
 
 TEST_CASE("expect_not")

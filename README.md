@@ -134,7 +134,7 @@ cmake --build build
  - [x] core: base types, parsers, and combinators (Stream, Result, expect, sequence, anyof, etc.)
  - [x] core: runtime friendly api (polymorphism)
  - [ ] core: inline parsing (parse on call instead of creating a parser to be called later)
- - [ ] core: optimized parsers for static and fixed length strings 
+ - [x] core: optimized parsers for fixed length and constexpr-able strings (e.g. literals)
  - [ ] extra: json
  - [ ] extra: msgpack
  - [ ] extra: toml
