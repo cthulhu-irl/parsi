@@ -76,6 +76,20 @@
             }
         },
         {
+            "name": "android-x64",
+            "inherits": "base-android",
+            "displayName": "Android x86_64",
+            "description": "Sets android platform for x86_64 arch",
+            "architecture": {
+                "value": "x86_64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "ANDROID_ABI": "x86_64",
+                "VCPKG_TARGET_TRIPLET": "x64-android"
+            }
+        },
+        {
             "name": "android-arm64",
             "inherits": "base-android",
             "displayName": "Android ARM64",
@@ -114,6 +128,11 @@
             "name": "linux-x64",
             "displayName": "Linux x64",
             "configurePreset": "linux-x64"
+        },
+        {
+            "name": "android-x64",
+            "displayName": "Android x86_64",
+            "configurePreset": "android-x64"
         },
         {
             "name": "android-arm",
