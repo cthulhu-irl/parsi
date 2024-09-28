@@ -9,12 +9,14 @@ target_sources(${PROJECT_NAME}-tests
         charset.cpp
         rtparser.cpp
         fixed_string.cpp
+        parsi-c.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}-tests
     PRIVATE
         ${PROJECT_NAME}
         ${PROJECT_NAME}-options
+        parsi-c
         Catch2::Catch2
         Catch2::Catch2WithMain
 )

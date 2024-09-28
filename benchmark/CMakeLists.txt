@@ -6,6 +6,7 @@ target_link_libraries(${PROJECT_NAME}-benchmark-options
     INTERFACE
         ${PROJECT_NAME}
         ${PROJECT_NAME}-options
+        ${PROJECT_NAME}::parsi-c
         benchmark::benchmark
         benchmark::benchmark_main)
 

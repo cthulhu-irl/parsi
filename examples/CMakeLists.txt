@@ -1,1 +1,2 @@
 add_subdirectory(json_validator)
+add_subdirectory(parsi_c_usage)
