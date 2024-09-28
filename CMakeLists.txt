@@ -85,6 +85,8 @@ file(GLOB_RECURSE PARSI_HEADERS
 )
 target_sources(${PROJECT_NAME} PRIVATE ${PARSI_HEADERS})
 
+add_subdirectory(src)
+
 if (PARSI_TESTS)
     enable_testing()
     add_subdirectory(tests)
