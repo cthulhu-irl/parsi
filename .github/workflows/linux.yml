@@ -65,21 +65,23 @@ jobs:
       - name: Codecov
         uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{secrets.CODECOV_TOKEN}}
           files: build/${{matrix.config.preset}}/coverage/coverage.xml
           fail_ci_if_error: true
           functionalities: fix
 
       - name: Build Docs
+        if: false
         run: |
           cmake --build --preset ${{matrix.config.preset}} --target docs
           mv build/${{matrix.config.preset}}/docs/sphinx _site
 
       - name: Upload Pages Artifacts
+        if: false
         uses: actions/upload-pages-artifact@v2
 
   deploy-docs:
-    if: success() && github.ref == 'refs/heads/main'
+    if: false && success() && github.ref == 'refs/heads/main'
     needs: build-test-docs
     runs-on: ubuntu-latest
 
