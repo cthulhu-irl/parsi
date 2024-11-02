@@ -31,15 +31,13 @@ constexpr auto convert_hex_digit = [](char digit) -> std::uint8_t {
 
 constexpr auto raw_color_from_string(std::string_view str) -> std::optional<Color>
 {
-    constexpr auto hex_charset = parsi::Charset("0123456789abcdefABCDEF");
-
     if (str.size() != 7 || str[0] != '#') {
         return std::nullopt;
     }
 
     bool valid = true;
     for (std::size_t i = 1; i < 7; ++i) {
-        valid = valid && hex_charset.contains(str[i]);
+        valid = valid && (('0' <= str[i] && str[i] <= '9') || ('a' <= str[i] && str[i] <= 'f') || ('A' <= str[i] && str[i] <= 'F'));
     }
 
     if (!valid) [[unlikely]] {
@@ -138,22 +136,16 @@ static void bench_digits(benchmark::State& state, auto&& parser)
     for (auto _ : state) {
         auto res = parser(str.c_str());
         benchmark::DoNotOptimize(res);
-
-        state.PauseTiming();
         bytes_count += str.size();
-        state.ResumeTiming();
     }
 
     state.SetBytesProcessed(bytes_count);
 }
-BENCHMARK_CAPTURE(bench_digits, raw, [digits_charset=parsi::Charset("0123456789")](parsi::Stream stream) {
-    std::size_t index = 0;
-
-    while (index < stream.size() && digits_charset.contains(stream.at(index))) {
-        ++index;
+BENCHMARK_CAPTURE(bench_digits, raw, [](parsi::Stream stream) {
+    while (stream.size() >= 0 && '0' <= stream.front() && stream.front() <= '9') {
+        stream.advance(1);
     }
-
-    return parsi::Result{stream.advanced(index), true};
+    return parsi::Result{stream, true};
 });
 BENCHMARK_CAPTURE(bench_digits, parsi, parsi::repeat(parsi::expect(parsi::Charset("0123456789"))));
 BENCHMARK_CAPTURE(bench_digits, ctre, ctre::match<R"(^[0-9]*)">);
@@ -165,10 +157,8 @@ constexpr auto expect_identifer = []() {
     constexpr auto first_charset = parsi::Charset("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
     constexpr auto rest_charset = parsi::Charset("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
     return parsi::sequence(
-        parsi::expect('"'),
         parsi::expect(first_charset),
-        parsi::repeat(parsi::expect(rest_charset)),
-        parsi::expect('"')
+        parsi::repeat(parsi::expect(rest_charset))
     );
 }();
 constexpr auto expect_item = parsi::anyof(
@@ -257,10 +247,7 @@ static void bench_many_items(benchmark::State& state, auto&& parser)
     for (auto _ : state) {
         auto res = parser(str.c_str());
         benchmark::DoNotOptimize(&res);
-
-        state.PauseTiming();
         bytes_count += str.size();
-        state.ResumeTiming();
     }
 
     state.SetBytesProcessed(bytes_count);
