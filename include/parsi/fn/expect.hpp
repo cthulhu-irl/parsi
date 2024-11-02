@@ -4,6 +4,7 @@
 #include <string>
 
 #include "parsi/base.hpp"
+#include "parsi/charset.hpp"
 #include "parsi/fixed_string.hpp"
 
 namespace parsi {
@@ -19,8 +20,11 @@ struct ExpectChar {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        const bool is_valid = (stream.size() > 0) & (negate ^ stream.starts_with(expected));
-        stream.advance(is_valid);
+        if (stream.size() <= 0) [[unlikely]] {
+            return Result{stream, false};
+        }
+        const bool is_valid = negate ^ stream.starts_with(expected);
+        stream.advance(1);
         return Result{stream, is_valid};
     }
 };
@@ -36,14 +40,36 @@ struct ExpectCharset {
         if (stream.size() <= 0) [[unlikely]] {
             return Result{stream, false};
         }
+        const bool is_valid = charset.contains(stream.front());
+        stream.advance(1);
+        return Result{stream, is_valid};
+    }
+};
 
-        if (!charset.contains(stream.front())) {
+/**
+ * A parser that expects the stream to start with a character
+ * that is in one of the given character ranges.
+ */
+template <std::size_t SizeV>
+struct ExpectCharRangeSet {
+    std::array<CharRange, SizeV> charset_ranges;
+
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
+    {
+        if (stream.size() <= 0) [[unlikely]] {
             return Result{stream, false};
         }
 
+        const bool is_valid = check_against_ranges(stream.front(), std::make_index_sequence<SizeV>());
         stream.advance(1);
+        return Result{stream, is_valid};
+    }
 
-        return Result{stream, true};
+private:
+    template <std::size_t ...Is>
+    [[nodiscard]] constexpr auto check_against_ranges(char chr, std::index_sequence<Is...>) const noexcept -> bool
+    {
+        return (false || ... || (charset_ranges[Is].begin <= chr && chr <= charset_ranges[Is].end));
     }
 };
 
@@ -55,7 +81,6 @@ struct ExpectFixedString {
     {
         const auto expected_strview = expected.as_string_view();
         const bool starts_with = stream.starts_with(expected_strview);
-
         return Result{stream.advanced(starts_with * expected_strview.size()), starts_with};
     }
 };
@@ -69,7 +94,6 @@ struct ExpectString {
     [[nodiscard]] auto operator()(Stream stream) const noexcept -> Result
     {
         const bool starts_with = stream.starts_with(expected);
-
         return Result{stream.advanced(starts_with * expected.size()), starts_with};
     }
 };
@@ -127,7 +151,7 @@ template <std::size_t SizeV, typename CharT = const char>
 
 /**
  * Creates a parser that expects the stream to
- * start with a character the is in the given charset.
+ * start with a character that is in the given charset.
  */
 [[nodiscard]] constexpr auto expect(Charset expected) noexcept
     -> fn::ExpectCharset
@@ -137,12 +161,23 @@ template <std::size_t SizeV, typename CharT = const char>
 
 /**
  * Creates a parser that expects the stream to
- * start with a character the is in the given charset.
+ * start with a character that is in the given charset.
  */
 [[nodiscard]] constexpr auto expect_not(Charset expected) noexcept
     -> fn::ExpectCharset
 {
     return fn::ExpectCharset{expected.opposite()};
+}
+
+/**
+ * Creates a parser that expects the stream to
+ * start with a character that is in one the given char ranges.
+ */
+template <std::same_as<CharRange> ...Ts>
+[[nodiscard]] constexpr auto expect(CharRange first, Ts ...rest) noexcept
+    -> fn::ExpectCharRangeSet<1 + sizeof...(Ts)>
+{
+    return fn::ExpectCharRangeSet<1 + sizeof...(Ts)>{.charset_ranges = {first, rest...}};
 }
 
 }  // namespace parsi

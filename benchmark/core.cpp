@@ -37,11 +37,10 @@ constexpr auto raw_color_from_string(std::string_view str) -> std::optional<Colo
 
     bool valid = true;
     for (std::size_t i = 1; i < 7; ++i) {
-        valid = valid && (('0' <= str[i] && str[i] <= '9') || ('a' <= str[i] && str[i] <= 'f') || ('A' <= str[i] && str[i] <= 'F'));
-    }
-
-    if (!valid) [[unlikely]] {
-        return std::nullopt;
+        const bool is_hex = ('0' <= str[i] && str[i] <= '9') || ('a' <= str[i] && str[i] <= 'f') || ('A' <= str[i] && str[i] <= 'F');
+        if (!is_hex) [[unlikely]] {
+            return std::nullopt;
+        }
     }
 
     Color color;
@@ -57,12 +56,11 @@ constexpr auto parsi_color_from_string(std::string_view str) -> std::optional<Co
 {
     Color color;
 
-    constexpr auto hex_charset = parsi::Charset("0123456789abcdefABCDEF");
     constexpr auto color_parser = parsi::sequence(
         parsi::expect('#'),
         // a color code with 6 hex digits like `#C3A3BB` is equivalent to
         // Color{ .red = 0xC3, .green = 0xA3, .blue = 0xBB }
-        parsi::repeat<6, 6>(parsi::expect(hex_charset)),  // min=6 and max=6
+        parsi::repeat<6, 6>(parsi::expect(parsi::CharRange{'0', '9'}, parsi::CharRange{'a', 'f'}, parsi::CharRange{'A', 'F'})),  // min=6 and max=6
         parsi::eos()  // end of stream
     );
 
@@ -93,15 +91,15 @@ constexpr auto ctre_color_from_string(std::string_view str) -> std::optional<Col
         return std::nullopt;
     }
 
-    auto rstr = match.get<1>().to_view();
-    auto gstr = match.get<2>().to_view();
-    auto bstr = match.get<3>().to_view();
+    auto r_str = match.get<1>().to_view();
+    auto g_str = match.get<2>().to_view();
+    auto b_str = match.get<3>().to_view();
 
     Color color;
 
-    color.red = convert_hex_digit(rstr[0]) * 16 + convert_hex_digit(rstr[1]);
-    color.green = convert_hex_digit(bstr[0]) * 16 + convert_hex_digit(bstr[1]);
-    color.blue = convert_hex_digit(gstr[0]) * 16 + convert_hex_digit(gstr[1]);
+    color.red = convert_hex_digit(r_str[0]) * 16 + convert_hex_digit(r_str[1]);
+    color.green = convert_hex_digit(b_str[0]) * 16 + convert_hex_digit(b_str[1]);
+    color.blue = convert_hex_digit(g_str[0]) * 16 + convert_hex_digit(g_str[1]);
 
     return color;
 }
@@ -110,13 +108,23 @@ static void bench_color_hex(benchmark::State& state, auto&& parser)
 {
     std::srand(std::time(nullptr));
 
-    auto str = std::format("#{:02x}{:02x}{:02x}", std::rand()%256, std::rand()%256, std::rand()%256);
-    const std::string_view strview = str;
-
-    for (auto _ : state) {
-        auto res = parser(strview);
-        benchmark::DoNotOptimize(res);
+    std::vector<std::string> colors;
+    colors.reserve(1'000);
+    for (std::size_t count = 0; count < colors.capacity(); ++count)
+    {
+        colors.push_back(std::format("#{:02x}{:02x}{:02x}", std::rand()%256, std::rand()%256, std::rand()%256));
     }
+
+    std::size_t byte_count = 0;
+    for (auto _ : state) {
+        for (auto& color_str : colors) {
+            auto res = parser(std::string_view(color_str));
+            benchmark::DoNotOptimize(res);
+        }
+        byte_count += colors.size() * 7;
+    }
+
+    state.SetBytesProcessed(byte_count);
 }
 BENCHMARK_CAPTURE(bench_color_hex, raw, raw_color_from_string);
 BENCHMARK_CAPTURE(bench_color_hex, parsi, parsi_color_from_string);
@@ -147,18 +155,16 @@ BENCHMARK_CAPTURE(bench_digits, raw, [](parsi::Stream stream) {
     }
     return parsi::Result{stream, true};
 });
-BENCHMARK_CAPTURE(bench_digits, parsi, parsi::repeat(parsi::expect(parsi::Charset("0123456789"))));
+BENCHMARK_CAPTURE(bench_digits, parsi, parsi::repeat(parsi::expect(parsi::CharRange{'0', '9'})));
 BENCHMARK_CAPTURE(bench_digits, ctre, ctre::match<R"(^[0-9]*)">);
 
 
 constexpr auto optional_whitespaces = parsi::repeat(parsi::expect(parsi::Charset(" \n\t")));
-constexpr auto expect_digits = parsi::repeat<1>(parsi::expect(parsi::Charset("0123456789")));
+constexpr auto expect_digits = parsi::repeat<1>(parsi::expect(parsi::CharRange{'0', '9'}));
 constexpr auto expect_identifer = []() {
-    constexpr auto first_charset = parsi::Charset("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    constexpr auto rest_charset = parsi::Charset("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
     return parsi::sequence(
-        parsi::expect(first_charset),
-        parsi::repeat(parsi::expect(rest_charset))
+        parsi::expect(parsi::CharRange{'a', 'z'}, parsi::CharRange{'A', 'Z'}, parsi::CharRange{'_', '_'}),
+        parsi::repeat(parsi::expect(parsi::CharRange{'a', 'z'}, parsi::CharRange{'A', 'Z'}, parsi::CharRange{'0', '9'}, parsi::CharRange{'_', '_'}))
     );
 }();
 constexpr auto expect_item = parsi::anyof(
@@ -184,55 +190,11 @@ constexpr auto parsi_parser = parsi::sequence(
 
 constexpr auto ctre_parser = ctre::match<R"(^\[\s*(([0-9]+|[A-Za-z_]+[A-Za-z0-9_]*)\s*(,\s*([0-9]+|[A-Za-z_]+[A-Za-z0-9_]*)\s*)*)?\]$)">;
 
-
-static void bench_empty_string(benchmark::State& state, auto&& parser)
-{
-    for (auto _ : state) {
-        auto res = parser("");
-        benchmark::DoNotOptimize(res);
-    }
-}
-BENCHMARK_CAPTURE(bench_empty_string, parsi, parsi_parser);
-BENCHMARK_CAPTURE(bench_empty_string, ctre, ctre_parser);
-
-
-static void bench_empty_list(benchmark::State& state, auto&& parser)
-{
-    for (auto _ : state) {
-        auto res = parser("[]");
-        benchmark::DoNotOptimize(res);
-    }
-}
-BENCHMARK_CAPTURE(bench_empty_list, parsi, parsi_parser);
-BENCHMARK_CAPTURE(bench_empty_list, ctre, ctre_parser);
-
-
-static void bench_early_failure(benchmark::State& state, auto&& parser)
-{
-    for (auto _ : state) {
-        auto res = parser("['test',2]");
-        benchmark::DoNotOptimize(res);
-    }
-}
-BENCHMARK_CAPTURE(bench_early_failure, parsi, parsi_parser);
-BENCHMARK_CAPTURE(bench_early_failure, ctre, ctre_parser);
-
-
-static void bench_late_failure(benchmark::State& state, auto&& parser)
-{
-    for (auto _ : state) {
-        auto res = parser("[2,3,4,5,test,'rest']");
-        benchmark::DoNotOptimize(res);
-    }
-}
-BENCHMARK_CAPTURE(bench_late_failure, parsi, parsi_parser);
-BENCHMARK_CAPTURE(bench_late_failure, ctre, ctre_parser);
-
 static void bench_many_items(benchmark::State& state, auto&& parser)
 {
     auto str = [&state]() {
         std::string ret;
-        ret.reserve(state.range(0) * 20);
+        ret.reserve(state.range(0));
         ret += '[';
         for (std::size_t i=0; i < state.range(0); ++i) {
             ret += "1234567890,   test,";
@@ -252,7 +214,7 @@ static void bench_many_items(benchmark::State& state, auto&& parser)
 
     state.SetBytesProcessed(bytes_count);
 }
-BENCHMARK_CAPTURE(bench_many_items, parsi, parsi_parser)->RangeMultiplier(10)->Range(1, 100'000'000);
-BENCHMARK_CAPTURE(bench_many_items, ctre, ctre_parser)->RangeMultiplier(10)->Range(1, 100'000'000);
+BENCHMARK_CAPTURE(bench_many_items, parsi, parsi_parser)->RangeMultiplier(10)->Range(100, 10'000'000);
+BENCHMARK_CAPTURE(bench_many_items, ctre, ctre_parser)->RangeMultiplier(10)->Range(100, 10'000'000);
 
 BENCHMARK_MAIN();

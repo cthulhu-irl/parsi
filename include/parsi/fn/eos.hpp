@@ -13,11 +13,7 @@ namespace fn {
 struct Eos {
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if (stream.size() > 0) {
-            return Result{stream, false};
-        }
-
-        return Result{stream, true};
+        return Result{stream, stream.size() <= 0};
     };
 };
 
