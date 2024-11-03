@@ -8,6 +8,11 @@
 
 namespace parsi {
 
+struct CharRange {
+    char begin;
+    char end;
+};
+
 /**
  * A container to hold a charset
  * and check whether a character/byte is in the set.

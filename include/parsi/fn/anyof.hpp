@@ -47,7 +47,7 @@ private:
             if (res) [[likely]] {
                 return res;
             }
-            return parse_rec<I+1>(res.stream);
+            return parse_rec<I+1>(stream);
         }
     }
 };

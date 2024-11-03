@@ -30,9 +30,20 @@ TEST_CASE("expect")
     CHECK(not pr::expect(pr::Charset("abcd"))("g"));
     CHECK(not pr::expect(pr::Charset("abcd"))("h"));
 
+    CHECK(pr::expect(pr::CharRange{'a', 'd'})("a"));
+    CHECK(pr::expect(pr::CharRange{'a', 'd'})("b"));
+    CHECK(pr::expect(pr::CharRange{'a', 'd'})("c"));
+    CHECK(pr::expect(pr::CharRange{'a', 'd'})("d"));
+
+    CHECK(not pr::expect(pr::Charset{'a', 'd'})("e"));
+    CHECK(not pr::expect(pr::Charset{'a', 'd'})("f"));
+    CHECK(not pr::expect(pr::Charset{'a', 'd'})("g"));
+    CHECK(not pr::expect(pr::Charset{'a', 'd'})("h"));
+
     CHECK(not pr::expect("test")(""));
     CHECK(not pr::expect('a')(""));
     CHECK(not pr::expect(pr::Charset("abcd"))(""));
+    CHECK(not pr::expect(pr::CharRange{'a', 'd'})(""));
 }
 
 TEST_CASE("expect dynamic string")
