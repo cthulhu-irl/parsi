@@ -1,3 +1,4 @@
+#include <cassert>
 #include <ctime>
 #include <random>
 #include <format>
@@ -119,6 +120,7 @@ static void bench_color_hex(benchmark::State& state, auto&& parser)
     for (auto _ : state) {
         for (auto& color_str : colors) {
             auto res = parser(std::string_view(color_str));
+            assert(!!res);
             benchmark::DoNotOptimize(res);
         }
         byte_count += colors.size() * 7;
@@ -143,6 +145,7 @@ static void bench_digits(benchmark::State& state, auto&& parser)
 
     for (auto _ : state) {
         auto res = parser(str.c_str());
+        assert(!!res);
         benchmark::DoNotOptimize(res);
         bytes_count += str.size();
     }
@@ -150,10 +153,14 @@ static void bench_digits(benchmark::State& state, auto&& parser)
     state.SetBytesProcessed(bytes_count);
 }
 BENCHMARK_CAPTURE(bench_digits, raw, [](parsi::Stream stream) {
-    while (stream.size() >= 0 && '0' <= stream.front() && stream.front() <= '9') {
-        stream.advance(1);
+    const char* const str = stream.data();
+    const std::size_t size = stream.size();
+
+    std::size_t index = 0;
+    while (index < size && '0' <= str[index] && str[index] <= '9') {
+        ++index;
     }
-    return parsi::Result{stream, true};
+    return parsi::Result{parsi::Stream(str, index), true};
 });
 BENCHMARK_CAPTURE(bench_digits, parsi, parsi::repeat(parsi::expect(parsi::CharRange{'0', '9'})));
 BENCHMARK_CAPTURE(bench_digits, ctre, ctre::match<R"(^[0-9]*)">);
@@ -208,7 +215,8 @@ static void bench_many_items(benchmark::State& state, auto&& parser)
 
     for (auto _ : state) {
         auto res = parser(str.c_str());
-        benchmark::DoNotOptimize(&res);
+        assert(!!res);
+        benchmark::DoNotOptimize(res);
         bytes_count += str.size();
     }
 

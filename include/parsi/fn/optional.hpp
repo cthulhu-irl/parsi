@@ -6,9 +6,7 @@
 
 #include "parsi/base.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 /**
  * Makes a parser to be optional and resort back to original stream
@@ -31,22 +29,6 @@ struct Optional {
     }
 };
 
-}  // namespace fn
-
-/**
- * Creates an optional parser out of given `parser`
- * that will return a valid succeeded result with
- * the original stream if the `parser` fails.
- * 
- * @see fn::Optional
- */
-template <is_parser F>
-[[nodiscard]] constexpr auto optional(F&& parser) noexcept
-    -> fn::Optional<std::remove_cvref_t<F>>
-{
-    return fn::Optional<std::remove_cvref_t<F>>{std::forward<F>(parser)};
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_OPTIONAL_HPP

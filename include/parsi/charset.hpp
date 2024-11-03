@@ -9,8 +9,8 @@
 namespace parsi {
 
 struct CharRange {
-    char begin;
-    char end;
+    const char begin;
+    const char end;
 };
 
 /**

@@ -7,9 +7,7 @@
 
 #include "parsi/base.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 /**
  * A parser combinator where it tries the given `parsers`
@@ -52,22 +50,6 @@ private:
     }
 };
 
-}  // namespace fn
-
-/**
- * Creates a parser by combining the given `parsers`
- * where the result of only the one that succeeds
- * or the result of last one that fails will be returned.
- * 
- * @see fn::AnyOf
- */
-template <is_parser... Fs>
-[[nodiscard]] constexpr auto anyof(Fs&&... parsers) noexcept
-    -> fn::AnyOf<std::remove_cvref_t<Fs>...>
-{
-    return fn::AnyOf<std::remove_cvref_t<Fs>...>(std::forward<Fs>(parsers)...);
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_ANYOF_HPP

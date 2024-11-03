@@ -3,9 +3,7 @@
 
 #include "parsi/base.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 /**
  * A parser that expects the stream to have come to its end.
@@ -17,16 +15,6 @@ struct Eos {
     };
 };
 
-}  // namespace fn
-
-/**
- * Creates a parser that expects the stream to have come to its end.
- */
-[[nodiscard]] constexpr auto eos() noexcept -> fn::Eos
-{
-    return fn::Eos{};
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_EOS_HPP
