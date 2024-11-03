@@ -49,7 +49,7 @@ private:
             if (!res) {
                 return res;
             }
-            return parse_rec<I+1>(res.stream);
+            return parse_rec<I+1>(res.stream());
         }
     }
 };

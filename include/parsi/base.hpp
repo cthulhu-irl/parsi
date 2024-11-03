@@ -2,6 +2,7 @@
 #define PARSI_BASE_HPP
 
 #include <concepts>
+#include <cstdint>
 #include <cstring>
 #include <span>
 #include <string_view>
@@ -14,27 +15,23 @@ namespace parsi {
  */
 class Stream {
 public:
-    using buffer_type = std::span<const char>;
-
-private:
-    buffer_type _buffer{};
-    std::size_t _cursor = 0;
+    const char* _cursor = nullptr;
+    std::size_t _size = 0;
 
 public:
     constexpr Stream(const char* str) noexcept : Stream(str, std::strlen(str))
     {
     }
 
-    constexpr Stream(const char* str, const std::size_t size) noexcept
-        : _buffer(str, size), _cursor(0)
+    constexpr Stream(const char* str, const std::size_t size) noexcept : _cursor(str), _size(size)
     {
     }
 
-    constexpr Stream(std::string_view str) noexcept : _buffer(str.data(), str.size()), _cursor(0)
+    constexpr Stream(std::string_view str) noexcept : _cursor(str.data()), _size(str.size())
     {
     }
 
-    constexpr Stream(buffer_type buffer) noexcept : _buffer(buffer), _cursor(0)
+    constexpr Stream(std::span<const char> buffer) noexcept : _cursor(buffer.data()), _size(buffer.size())
     {
     }
 
@@ -43,7 +40,8 @@ public:
      */
     constexpr void advance(std::size_t count) noexcept
     {
-        _cursor = _cursor + count;
+        _cursor += count;
+        _size -= count;
     }
 
     /**
@@ -51,33 +49,7 @@ public:
      */
     [[nodiscard]] constexpr auto advanced(std::size_t count) const noexcept -> Stream
     {
-        auto ret = Stream(_buffer);
-        ret._cursor = _cursor + count;
-        return ret;
-    }
-
-    [[nodiscard]] constexpr auto starts_with(const char character) const noexcept -> bool
-    {
-        if (_cursor >= _buffer.size()) [[unlikely]] {
-            return false;
-        }
-
-        return character == _buffer[_cursor];
-    }
-
-    [[nodiscard]] constexpr auto starts_with(std::span<const char> span) const noexcept -> bool
-    {
-        if (size() < span.size()) {
-            return false;
-        }
-
-        for (std::size_t idx = 0; idx < span.size(); ++idx) {
-            if (_buffer[_cursor + idx] != span[idx]) [[unlikely]] {
-                return false;
-            }
-        }
-
-        return true;
+        return Stream(_cursor + count, _size - count);
     }
 
     /**
@@ -85,62 +57,68 @@ public:
      */
     [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
-        return _buffer.size() - _cursor;
-    }
-
-    /**
-     * size of the underlying buffer.
-     */
-    [[nodiscard]] constexpr auto buffer_size() const noexcept -> std::size_t
-    {
-        return _buffer.size();
-    }
-
-    /**
-     * an index to current position into the buffer.
-     */
-    [[nodiscard]] constexpr auto cursor() const noexcept -> std::size_t
-    {
-        return _cursor;
+        return _size;
     }
 
     /**
      * underlying buffer.
      */
-    [[nodiscard]] constexpr auto buffer() const noexcept -> buffer_type
+    [[nodiscard]] constexpr auto data() const noexcept -> const char*
     {
-        return _buffer;
+        return _cursor;
     }
 
-    /**
-     * returns the remaining buffer span.
-     */
-    [[nodiscard]] constexpr auto remaining_buffer() const noexcept -> buffer_type
+    [[nodiscard]] constexpr auto as_string_view() const noexcept -> std::string_view
     {
-        return _buffer.subspan(cursor());
-    }
-
-    [[nodiscard]] constexpr auto at(const std::size_t index) const noexcept -> const char
-    {
-        return _buffer[_cursor + index];
+        return std::string_view(_cursor, _size);
     }
 
     /**
      * first byte in the remainder of buffer.
      */
-    [[nodiscard]] constexpr auto front() const noexcept -> const char
+    [[nodiscard]] constexpr auto front() const noexcept -> char
     {
-        return _buffer[_cursor];
+        return _cursor[0];
     }
 };
 
-struct Result {
-    Stream stream;
-    bool valid = false;
+class Result {
+    static constexpr std::size_t valid_bit_offset = 63;
+    static constexpr std::size_t size_mask = 0xFFFFFFFF;
+
+    const char* _cursor = nullptr;
+    std::size_t _size_and_bits = 0;
+
+public:
+    constexpr Result(Stream stream, bool is_valid) noexcept
+        : _cursor(stream.data())
+        , _size_and_bits(stream.size() | (static_cast<std::size_t>(is_valid) << valid_bit_offset))
+    {
+    }
+
+    [[nodiscard]] constexpr auto cursor() const noexcept -> const char*
+    {
+        return _cursor;
+    }
+
+    [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
+    {
+        return _size_and_bits & size_mask;
+    }
+
+    [[nodiscard]] constexpr auto stream() const noexcept -> Stream
+    {
+        return Stream(_cursor, _size_and_bits & size_mask);
+    }
+
+    [[nodiscard]] constexpr auto is_valid() const noexcept -> bool
+    {
+        return _size_and_bits & (1ull << valid_bit_offset);
+    }
 
     [[nodiscard]] constexpr operator bool() const noexcept
     {
-        return valid;
+        return is_valid();
     }
 };
 

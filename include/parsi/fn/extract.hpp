@@ -29,16 +29,14 @@ struct Extract {
     {
         auto result = parser(stream);
         if (result) {
-            auto buffer = stream.buffer();
-            auto start = stream.cursor();
-            auto end = result.stream.cursor();
+            const auto start = stream.data();
+            const auto end = result.stream().data();
 
-            auto subspan = buffer.subspan(start, end - start);
-            auto substr = std::string_view(subspan.data(), subspan.size());
+            const std::string_view substr = stream.as_string_view().substr(0, end - start);
 
             if constexpr (requires { { visitor(substr) } -> std::same_as<bool>; }) {
                 if (!visitor(substr)) {
-                    return Result{result.stream, false};
+                    return Result{result.stream(), false};
                 }
             }
             else {

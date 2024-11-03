@@ -6,11 +6,6 @@
 
 namespace {
 
-constexpr static std::string_view strview(std::span<const char> buffer)
-{
-    return std::string_view(buffer.data(), buffer.size());
-}
-
 constexpr static auto create_json_string_validator_parser()
 {
     constexpr auto oct_charset = parsi::Charset("01234567");
@@ -78,15 +73,18 @@ constexpr static auto create_joined_repeated_parser(JoinParserF&& join_parser, I
             return parsi::Result{stream, true};
         }
 
-        while ((res = join_parser(res.stream))) {
-            res = item_parser(res.stream);
+        stream = res.stream();
+        while ((res = join_parser(stream))) {
+            stream = res.stream();
+            res = item_parser(stream);
             if (!res)
             {
-                return parsi::Result{res.stream, false};
+                return parsi::Result{stream, false};
             }
+            stream = res.stream();
         }
 
-        return parsi::Result{res.stream, true};
+        return parsi::Result{stream, true};
     };
 }
 
@@ -196,7 +194,7 @@ int main(int argc, char** argv)
     );
 
     if (auto res = parser(std::string_view(file_content)); !res) {
-        std::cout << " [Syntax Error] Remaining buffer that couldn't be parsed: " << strview(res.stream.remaining_buffer()) << '\n';
+        std::cout << " [Syntax Error] Remaining buffer that couldn't be parsed: " << res.stream().as_string_view() << '\n';
         return 1;
     }
 
