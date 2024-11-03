@@ -11,21 +11,29 @@ namespace parsi {
 
 namespace fn {
 
+struct Negation {
+    bool negated = false;
+};
+
 /**
  * A parser that expects the stream to start with the given character.
  */
+template <Negation NegationV = Negation{.negated = false}>
 struct ExpectChar {
     char expected;
-    bool negate = false;
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         if (stream.size() <= 0) [[unlikely]] {
             return Result{stream, false};
         }
-        const bool is_valid = negate ^ stream.starts_with(expected);
+        const bool is_valid = stream.as_string_view().starts_with(expected);
         stream.advance(1);
-        return Result{stream, is_valid};
+        if constexpr (NegationV.negated) {
+            return Result{stream, !is_valid};
+        } else {
+            return Result{stream, is_valid};
+        }
     }
 };
 
@@ -80,7 +88,7 @@ struct ExpectFixedString {
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
         const auto expected_strview = expected.as_string_view();
-        const bool starts_with = stream.starts_with(expected_strview);
+        const bool starts_with = stream.as_string_view().starts_with(expected_strview);
         return Result{stream.advanced(starts_with * expected_strview.size()), starts_with};
     }
 };
@@ -93,7 +101,7 @@ struct ExpectString {
 
     [[nodiscard]] auto operator()(Stream stream) const noexcept -> Result
     {
-        const bool starts_with = stream.starts_with(expected);
+        const bool starts_with = stream.as_string_view().starts_with(expected);
         return Result{stream.advanced(starts_with * expected.size()), starts_with};
     }
 };
@@ -135,18 +143,18 @@ template <std::size_t SizeV, typename CharT = const char>
  * Creates a parser that expects the stream to start with the given character.
  */
 [[nodiscard]] constexpr auto expect(char expected) noexcept
-    -> fn::ExpectChar
+    -> fn::ExpectChar<>
 {
-    return fn::ExpectChar{expected};
+    return fn::ExpectChar<>{expected};
 }
 
 /**
  * Creates a parser that expects the stream to start with the given character.
  */
 [[nodiscard]] constexpr auto expect_not(char expected) noexcept
-    -> fn::ExpectChar
+    -> fn::ExpectChar<fn::Negation{.negated = true}>
 {
-    return fn::ExpectChar{ .expected = expected, .negate = true };
+    return fn::ExpectChar<fn::Negation{.negated = true}>{expected};
 }
 
 /**

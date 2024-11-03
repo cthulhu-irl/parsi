@@ -54,7 +54,7 @@ private:
                 }
             }
 
-            stream.advance(result.stream.cursor() - stream.cursor());
+            stream = result.stream();
         }
 
         if constexpr (Min != 0) {
@@ -92,7 +92,7 @@ struct RepeatedRanged {
                 break;
             }
 
-            stream = result.stream;
+            stream = result.stream();
         }
 
         if (count < min || max < count) [[unlikely]] {

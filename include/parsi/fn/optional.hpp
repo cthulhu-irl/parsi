@@ -27,7 +27,6 @@ struct Optional {
         if (!result) [[likely]] {
             return Result{stream, true};
         }
-
         return result;
     }
 };
