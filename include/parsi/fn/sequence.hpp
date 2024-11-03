@@ -7,9 +7,7 @@
 
 #include "parsi/base.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 /**
  * Combines multiple parsers in consecutive order.
@@ -54,22 +52,6 @@ private:
     }
 };
 
-}  // namespace fn
-
-/**
- * Creates an instance of fn::Sequence;
- * a combinator to combine multiple parsers
- * to parse a stream sequentially and consecutively.
- * 
- * @see parsi::fn::Sequence
- */
-template <is_parser... Fs>
-[[nodiscard]] constexpr auto sequence(Fs&&... parsers) noexcept
-    -> fn::Sequence<std::remove_cvref_t<Fs>...>
-{
-    return fn::Sequence<std::remove_cvref_t<Fs>...>(std::forward<Fs>(parsers)...);
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_SEQUENCE_HPP

@@ -7,9 +7,7 @@
 
 #include "parsi/base.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 /**
  * A parser combinator that repeats the parser on stream
@@ -30,38 +28,29 @@ struct Repeated {
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if constexpr (Max == 0) {
+        if (Max < Min || Max == 0) {
             return Result{stream, true};
         }
 
-        return apply_loop(parser, stream);
-    }
-
-private:
-    /// the generic/general unspecialized loop. 
-    [[nodiscard]] static constexpr auto apply_loop(const auto& parser, Stream stream) noexcept -> Result
-    {
         std::size_t count = 0;
 
-        while (const Result result = parser(stream)) {
-            if constexpr (Min != 0 || Max != std::numeric_limits<std::size_t>::max()) {
-                ++count;
+        for (; count < Min; ++count) {
+            const Result result = parser(stream);
+            if (!result) [[unlikely]] {
+                return result;
             }
-
-            if constexpr (Max != std::numeric_limits<std::size_t>::max()) {
-                if (count > Max) [[unlikely]] {
-                    return Result{stream, false};
-                }
-            }
-
             stream = result.stream();
         }
 
-        if constexpr (Min != 0) {
-            return Result{stream, Min <= count};
-        } else {
-            return Result{stream, true};
+        for (; count <= Max; ++count) {
+            const Result result = parser(stream);
+            if (!result) [[unlikely]] {
+                return Result{stream, true};
+            }
+            stream = result.stream();
         }
+
+        return Result{stream, false};
     }
 };
 
@@ -103,56 +92,6 @@ struct RepeatedRanged {
     }
 };
 
-}  // namespace fn
-
-/**
- * Creates a repeated parser combinator,
- * a combinator which combines the given parser repeatedly
- * for a given minimum and maximum times.
- * 
- * By default, the range is from 0 to almost infinite,
- * expecting the parser to be repeated from none at all to any amount of times.
- * 
- * @see fn::Repeated
- */
-template <std::size_t Min = 0, std::size_t Max = std::numeric_limits<std::size_t>::max(),
-          is_parser F>
-[[nodiscard]] constexpr auto repeat(F&& parser) noexcept
-    -> fn::Repeated<std::remove_cvref_t<F>, Min, Max>
-{
-    return fn::Repeated<std::remove_cvref_t<F>, Min, Max>{std::forward<F>(parser)};
-}
-
-/**
- * Creates a parser that repeats the given `parser`
- * with itself consecutively for exactly `count` times.
- * 
- * @see fn::RepeatedRanged
- */
-template <is_parser F>
-[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t count) noexcept
-    -> fn::RepeatedRanged<std::remove_cvref_t<F>>
-{
-    return fn::RepeatedRanged<std::remove_cvref_t<F>>{std::forward<F>(parser), count, count};
-}
-
-/**
- * Creates a parser that repeats the given `parser`
- * with itself consecutively for at least `min` times and maximum `max` times.
- * 
- * If the parser can successfully parse the stream consecutively
- * within `min` and `max` range, then the parsing will be valid,
- * otherwise parsing will fail.
- * 
- * @see fn::RepeatedRanged
- */
-template <is_parser F>
-[[nodiscard]] constexpr auto repeat(F&& parser, std::size_t min, std::size_t max) noexcept
-    -> fn::RepeatedRanged<std::remove_cvref_t<F>>
-{
-    return fn::RepeatedRanged<std::remove_cvref_t<F>>{std::forward<F>(parser), min, max};
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_REPEATED_HPP

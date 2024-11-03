@@ -11,4 +11,3 @@ target_link_libraries(${PROJECT_NAME}-benchmark-options
 
 add_executable(${PROJECT_NAME}-bench-core core.cpp)
 target_link_libraries(${PROJECT_NAME}-bench-core PRIVATE ${PROJECT_NAME}-benchmark-options)
-

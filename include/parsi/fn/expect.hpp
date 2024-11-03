@@ -7,9 +7,7 @@
 #include "parsi/charset.hpp"
 #include "parsi/fixed_string.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 struct Negation {
     bool negated = false;
@@ -106,88 +104,6 @@ struct ExpectString {
     }
 };
 
-}  // namespace fn
-
-/**
- * Creates a parser that expects the stream to start with the given fixed string.
- * Parser's expected string is fixed and cannot be changed. better performance for string literals.
- */
-template <std::size_t SizeV>
-[[nodiscard]] constexpr auto expect(const char (&str)[SizeV]) noexcept
-    -> fn::ExpectFixedString<SizeV, const char>
-{
-    return fn::ExpectFixedString<SizeV, const char>{FixedString<SizeV, const char>::make(str, SizeV).value()};
-}
-
-/**
- * Creates a parser that expects the stream to start with the given fixed string.
- * Parser's expected string is fixed and cannot be changed. better performance for string literals.
- */
-template <std::size_t SizeV, typename CharT = const char>
-[[nodiscard]] constexpr auto expect(FixedString<SizeV, CharT> expected) noexcept
-    -> fn::ExpectFixedString<SizeV, CharT>
-{
-    return fn::ExpectFixedString<SizeV, CharT>{expected};
-}
-
-/**
- * Creates a parser that expects the stream to start with the given string.
- */
-[[nodiscard]] inline auto expect(std::string expected) noexcept
-    -> fn::ExpectString
-{
-    return fn::ExpectString{std::move(expected)};
-}
-
-/**
- * Creates a parser that expects the stream to start with the given character.
- */
-[[nodiscard]] constexpr auto expect(char expected) noexcept
-    -> fn::ExpectChar<>
-{
-    return fn::ExpectChar<>{expected};
-}
-
-/**
- * Creates a parser that expects the stream to start with the given character.
- */
-[[nodiscard]] constexpr auto expect_not(char expected) noexcept
-    -> fn::ExpectChar<fn::Negation{.negated = true}>
-{
-    return fn::ExpectChar<fn::Negation{.negated = true}>{expected};
-}
-
-/**
- * Creates a parser that expects the stream to
- * start with a character that is in the given charset.
- */
-[[nodiscard]] constexpr auto expect(Charset expected) noexcept
-    -> fn::ExpectCharset
-{
-    return fn::ExpectCharset{expected};
-}
-
-/**
- * Creates a parser that expects the stream to
- * start with a character that is in the given charset.
- */
-[[nodiscard]] constexpr auto expect_not(Charset expected) noexcept
-    -> fn::ExpectCharset
-{
-    return fn::ExpectCharset{expected.opposite()};
-}
-
-/**
- * Creates a parser that expects the stream to
- * start with a character that is in one the given char ranges.
- */
-template <std::same_as<CharRange> ...Ts>
-[[nodiscard]] constexpr auto expect(CharRange first, Ts ...rest) noexcept
-    -> fn::ExpectCharRangeSet<1 + sizeof...(Ts)>
-{
-    return fn::ExpectCharRangeSet<1 + sizeof...(Ts)>{.charset_ranges = {first, rest...}};
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_EXPECT_HPP

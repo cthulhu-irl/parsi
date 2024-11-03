@@ -7,9 +7,7 @@
 
 #include "parsi/base.hpp"
 
-namespace parsi {
-
-namespace fn {
+namespace parsi::fn {
 
 /**
  * Visits the sub portion of the stream
@@ -48,25 +46,6 @@ struct Extract {
     }
 };
 
-}  // namespace fn
-
-/**
- * Creates a `parser` that extracts (non-owning) the portion
- * that was successfully parsed with the given `parser`,
- * and passes the subspan portion to the given `visitor`.
- * 
- * @see fn::Extract
- */
-template <is_parser F, std::invocable<std::string_view> G>
-[[nodiscard]] constexpr auto extract(F&& parser, G&& visitor) noexcept
-    -> fn::Extract<std::remove_cvref_t<F>, std::remove_cvref_t<G>>
-{
-    return fn::Extract<std::remove_cvref_t<F>, std::remove_cvref_t<G>>{
-        std::forward<F>(parser),
-        std::forward<G>(visitor)
-    };
-}
-
-}  // namespace parsi
+}  // namespace parsi::fn
 
 #endif  // PARSI_FN_EXTRACT_HPP
