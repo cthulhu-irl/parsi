@@ -108,11 +108,10 @@ TEST_CASE("repeat")
     CHECK(pr::repeat(pr::expect("more "))("more more "));
     CHECK(pr::repeat<1>(pr::expect("at least once"))("at least once at least once"));
     CHECK(pr::repeat<1>(pr::expect("more "))("more more "));
-    CHECK(pr::repeat<0, 0>(pr::expect("match"))("match"));
     CHECK(pr::repeat<0, 0>(pr::expect("match"))("yep"));
-    CHECK(pr::repeat<0, 0>(pr::expect("match"))("match"));
     CHECK(pr::repeat<1, 1>(pr::expect("exactly once"))("exactly once"));
 
+    CHECK(not pr::repeat<0, 0>(pr::expect("match"))("match"));
     CHECK(not pr::repeat<1>(pr::expect("at least once"))("nope"));
     CHECK(not pr::repeat<1, 1>(pr::expect("at least once"))("nope"));
 }

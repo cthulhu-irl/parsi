@@ -4,11 +4,112 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "parsi/parsi.hpp"
+
+static bool parsi_charset_check(const parsi_charset_t* charset, char chr);
+
+namespace parsi::details {
+
+template <bool IsValidV>
+constexpr auto always_parser = [](Stream stream) { return Result{stream, IsValidV}; };
+
+template <typename F>
+static auto parser_list_parameter_pack_visit(const std::size_t count, parsi_parser_t* parsers, F&& callback)
+{
+    switch (count)
+    {
+        case 0: return callback();
+        case 1: return callback(parsers[0]);
+        case 2: return callback(parsers[0], parsers[1]);
+        case 3: return callback(parsers[0], parsers[1], parsers[2]);
+        case 4: return callback(parsers[0], parsers[1], parsers[2], parsers[3]);
+        case 5: return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4]);
+        case 6: return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4], parsers[5]);
+        case 7: return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4], parsers[5], parsers[6]);
+        case 8: return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4], parsers[5], parsers[6], parsers[7]);
+        case 9: return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4], parsers[5], parsers[6], parsers[7], parsers[8]);
+        case 10: return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4], parsers[5], parsers[6], parsers[7], parsers[8], parsers[9]);
+        default: break;
+    }
+
+    // TODO
+    return callback(parsers[0], parsers[1], parsers[2], parsers[3], parsers[4], parsers[5], parsers[6], parsers[7], parsers[8], parsers[9], parsers[10]);
+}
+
+template <typename CallbackF>
+static auto compile_impl(parsi_parser_t* parser, CallbackF&& wrapper_cb)
+{
+    if (!parser) [[unlikely]] {
+        return wrapper_cb(always_parser<false>);
+    }
+
+    switch (parser->type)
+    {
+        case parsi_parser_type_none:
+            return wrapper_cb(always_parser<false>);
+        case parsi_parser_type_custom:
+            return wrapper_cb([func=parser->custom.func, context=parser->custom.context](Stream stream) {
+                auto result = func(context, parsi_stream_t{.cursor = stream.data(), .size = stream.size()});
+                return Result{Stream(result.stream.cursor, result.stream.size), result.is_valid};
+            });
+        case parsi_parser_type_eos:
+            return wrapper_cb(fn::Eos{});
+        case parsi_parser_type_char:
+            return wrapper_cb(fn::ExpectChar{parser->expect_char.expected});
+        case parsi_parser_type_charset:
+            return wrapper_cb([charset=parser->expect_charset.expected](Stream stream) -> Result {
+                if (stream.size() >= 1 && parsi_charset_check(&charset, stream.front())) [[likely]] {
+                    stream.advance(1);
+                    return Result{stream, true};
+                }
+                return Result{stream, false};
+            });
+        case parsi_parser_type_string:
+            return wrapper_cb(fn::ExpectStringView{std::string_view(parser->expect_string.string, parser->expect_string.size)});
+        case parsi_parser_type_static_string:
+            return wrapper_cb(fn::ExpectStringView{std::string_view(parser->expect_static_string.string, parser->expect_static_string.size)});
+        case parsi_parser_type_extract:
+            return wrapper_cb(extract(
+                compile_impl(parser->extract.parser, wrapper_cb),
+                [func=parser->extract.func, context=parser->extract.context](std::string_view str) {
+                    return func(context, str.data(), str.size());
+                }
+            ));
+        case parsi_parser_type_sequence:
+            return parser_list_parameter_pack_visit(parser->sequence.size, parser->sequence.parsers, [&]<typename ...Ts>(Ts&& ...parsers) {
+                return wrapper_cb(sequence(compile_impl(&parsers, wrapper_cb)...));
+            });
+        case parsi_parser_type_anyof:
+            return parser_list_parameter_pack_visit(parser->anyof.size, parser->anyof.parsers, [&]<typename ...Ts>(Ts&& ...parsers) {
+                return wrapper_cb(anyof(compile_impl(&parsers, wrapper_cb)...));
+            });
+        case parsi_parser_type_repeat:
+            if (parser->repeat.min == 0 && parser->repeat.max == std::numeric_limits<std::size_t>::max()) {
+                return compile_impl(parser->repeat.parser, [&]<typename ParserT>(ParserT&& p) {
+                    return wrapper_cb(repeat(std::forward<ParserT>(p)));
+                });
+            }
+            return wrapper_cb(repeat(compile_impl(parser->repeat.parser, wrapper_cb), parser->repeat.min, parser->repeat.max));
+        case parsi_parser_type_optional:
+            return wrapper_cb(optional(compile_impl(parser->optional.parser, wrapper_cb)));
+    }
+
+    // this should be unreachable.
+    return wrapper_cb(always_parser<false>);
+}
+
+static RTParser compile_to_rtparser(parsi_parser_t* parser)
+{
+    return compile_impl(parser, []<typename ParserT>(ParserT&& p) { return RTParser(std::forward<ParserT>(p)); });
+}
+
+} // namespace parsi::details
+
 struct parsi_compiled_parser {
-    parsi_parser_t* parser;
+    parsi::RTParser parser;
 };
 
-static bool parsi_charset_check(parsi_charset_t* charset, char chr)
+static bool parsi_charset_check(const parsi_charset_t* charset, char chr)
 {
     const std::size_t idx = static_cast<std::size_t>(chr);
     const std::size_t bit = static_cast<std::size_t>(1) << (idx & 63ull);  // idx % 64
@@ -116,7 +217,7 @@ void parsi_free_parser(parsi_parser_t* parser)
 
 parsi_compiled_parser_t* parsi_compile(parsi_parser_t* parser)
 {
-    return new parsi_compiled_parser_t{parser};
+    return new parsi_compiled_parser_t{parsi::details::compile_to_rtparser(parser)};
 }
 
 void parsi_free_compiled_parser(parsi_compiled_parser_t* compiled_parser)
@@ -124,145 +225,10 @@ void parsi_free_compiled_parser(parsi_compiled_parser_t* compiled_parser)
     delete compiled_parser;
 }
 
-static parsi_result_t parsi_parse_impl(parsi_parser_t* parser, parsi_stream_t stream)
-{
-    if (!parser) {
-        return parsi_result_t{ .is_valid = false, .stream = stream };
-    }
-
-    switch (parser->type) {
-        case parsi_parser_type_none:
-            return parsi_result_t{ .is_valid = false, .stream = stream };
-
-        case parsi_parser_type_custom:
-            return parser->custom.func(parser->custom.context, stream);
-
-        case parsi_parser_type_eos:
-            return parsi_result_t{ .is_valid = (stream.size == 0), .stream = stream };
-
-        case parsi_parser_type_char:
-            if (stream.size >= 1 && *stream.cursor == parser->expect_char.expected) {
-                return parsi_result_t{
-                    .is_valid = true,
-                    .stream = parsi_stream_t{ .cursor = stream.cursor + 1, .size = stream.size - 1 }
-                };
-            }
-            return parsi_result_t{ .is_valid = false, .stream = stream };
-
-        case parsi_parser_type_charset:
-            if (stream.size >= 1 && parsi_charset_check(&parser->expect_charset.expected, *stream.cursor)) {
-                return parsi_result_t{
-                    .is_valid = true,
-                    .stream = parsi_stream_t{ .cursor = stream.cursor + 1, .size = stream.size - 1 }
-                };
-            }
-            return parsi_result_t{ .is_valid = false, .stream = stream };
-
-        case parsi_parser_type_string:
-            if (stream.size >= parser->expect_string.size
-                    && strncmp(stream.cursor, parser->expect_string.string, parser->expect_string.size) == 0) {
-                return parsi_result_t{
-                    .is_valid = true,
-                    .stream = parsi_stream_t{
-                        .cursor = stream.cursor + parser->expect_string.size,
-                        .size = stream.size - parser->expect_string.size
-                    }
-                };
-            }
-            return parsi_result_t{ .is_valid = false, .stream = stream };
-
-        case parsi_parser_type_static_string:
-            if (stream.size >= parser->expect_static_string.size
-                    && strncmp(stream.cursor, parser->expect_static_string.string, parser->expect_static_string.size) == 0) {
-                return parsi_result_t{
-                    .is_valid = true,
-                    .stream = parsi_stream_t{
-                        .cursor = stream.cursor + parser->expect_static_string.size,
-                        .size = stream.size - parser->expect_static_string.size
-                    }
-                };
-            }
-            return parsi_result_t{ .is_valid = false, .stream = stream };
-
-        case parsi_parser_type_extract: {
-            parsi_result_t result = parsi_parse_impl(parser->extract.parser, stream);
-            if (result.is_valid) {
-                result.is_valid = parser->extract.func(parser->extract.context, stream.cursor, stream.size - result.stream.size);
-                return result;
-            }
-            return parsi_result_t{ .is_valid = false, .stream = result.stream };
-        }
-
-        case parsi_parser_type_sequence: {
-            if (!parser->sequence.parsers) {
-                return parsi_result_t{ .is_valid = true, .stream = stream };
-            }
-
-            parsi_result_t result = { .is_valid = true, .stream = stream };
-            for (std::size_t index = 0; index < parser->sequence.size; ++index) {
-                result = parsi_parse_impl(&parser->sequence.parsers[index], result.stream);
-                if (!result.is_valid) {
-                    return result;
-                }
-            }
-            return result;
-        }
-
-        case parsi_parser_type_anyof: {
-            if (!parser->anyof.parsers) {
-                return parsi_result_t{ .is_valid = true, .stream = stream };
-            }
-
-            for (std::size_t index = 0; index < parser->anyof.size; ++index) {
-                if (auto result = parsi_parse_impl(&parser->anyof.parsers[index], stream); result.is_valid) {
-                    return result;
-                }
-            }
-
-            return parsi_result_t{ .is_valid = false, .stream = stream };
-        }
-
-        case parsi_parser_type_repeat: {
-            if (parser->repeat.min > parser->repeat.max) [[unlikely]] {
-                return parsi_result_t{ .is_valid = false, .stream = stream };
-            }
-
-            std::size_t count = 0;
-            parsi_result_t result = parsi_parse_impl(parser->repeat.parser, stream);
-            while (result.is_valid) {
-                ++count;
-
-                if (count > parser->repeat.max) [[unlikely]] {
-                    break;
-                }
-
-                stream = result.stream;
-                result = parsi_parse_impl(parser->repeat.parser, stream);
-            }
-
-            if (count < parser->repeat.min || parser->repeat.max < count) [[unlikely]] {
-                return parsi_result_t{ .is_valid = false, .stream = result.stream };
-            }
-
-            return parsi_result_t{ .is_valid = true, .stream = stream };
-        }
-
-        case parsi_parser_type_optional: {
-            parsi_result_t result = parsi_parse_impl(parser->optional.parser, stream);
-            if (result.is_valid) {
-                return result;
-            }
-            return parsi_result_t{ .is_valid = true, .stream = stream };
-        }
-    }
-
-    // this should be unreachable.
-    return parsi_result_t{ .is_valid = false, .stream = stream };
-}
-
 parsi_result_t parsi_parse(parsi_compiled_parser_t* compiled_parser, parsi_stream_t stream)
 {
-    return parsi_parse_impl(compiled_parser->parser, stream);
+    auto result = compiled_parser->parser(parsi::Stream(stream.cursor, stream.size));
+    return parsi_result_t{.is_valid = result.is_valid(), .stream = parsi_stream_t{.cursor = result.stream().data(), .size = result.stream().size()}};
 }
 
 //-- helpers
