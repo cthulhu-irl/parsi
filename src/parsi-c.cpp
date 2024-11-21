@@ -6,7 +6,12 @@
 
 #include "parsi/parsi.hpp"
 
-static bool parsi_charset_check(const parsi_charset_t* charset, char chr);
+static bool parsi_charset_check(const parsi_charset_t* charset, char chr)
+{
+    const std::size_t idx = static_cast<std::size_t>(chr);
+    const std::size_t bit = static_cast<std::size_t>(1) << (idx & 63ull);  // idx % 64
+    return charset->bitset[idx >> 6ull] & bit;  // idx / 64
+}
 
 namespace parsi::details {
 
@@ -43,6 +48,16 @@ static auto compile_impl(parsi_parser_t* parser, CallbackF&& wrapper_cb)
         return wrapper_cb(always_parser<false>);
     }
 
+    constexpr auto expect_custom_charset = [](parsi_charset_t charset) {
+        return [charset=charset](Stream stream) -> Result {
+            if (stream.size() >= 1 && parsi_charset_check(&charset, stream.front())) [[likely]] {
+                stream.advance(1);
+                return Result{stream, true};
+            }
+            return Result{stream, false};
+        };
+    };
+
     switch (parser->type)
     {
         case parsi_parser_type_none:
@@ -57,13 +72,7 @@ static auto compile_impl(parsi_parser_t* parser, CallbackF&& wrapper_cb)
         case parsi_parser_type_char:
             return wrapper_cb(fn::ExpectChar{parser->expect_char.expected});
         case parsi_parser_type_charset:
-            return wrapper_cb([charset=parser->expect_charset.expected](Stream stream) -> Result {
-                if (stream.size() >= 1 && parsi_charset_check(&charset, stream.front())) [[likely]] {
-                    stream.advance(1);
-                    return Result{stream, true};
-                }
-                return Result{stream, false};
-            });
+            return wrapper_cb(expect_custom_charset(parser->expect_charset.expected));
         case parsi_parser_type_string:
             return wrapper_cb(fn::ExpectStringView{std::string_view(parser->expect_string.string, parser->expect_string.size)});
         case parsi_parser_type_static_string:
@@ -85,9 +94,13 @@ static auto compile_impl(parsi_parser_t* parser, CallbackF&& wrapper_cb)
             });
         case parsi_parser_type_repeat:
             if (parser->repeat.min == 0 && parser->repeat.max == std::numeric_limits<std::size_t>::max()) {
-                return compile_impl(parser->repeat.parser, [&]<typename ParserT>(ParserT&& p) {
-                    return wrapper_cb(repeat(std::forward<ParserT>(p)));
-                });
+                if (parser->repeat.parser->type == parsi_parser_type_char) {
+                    return wrapper_cb(repeat(expect(parser->repeat.parser->expect_char.expected)));
+                }
+                if (parser->repeat.parser->type == parsi_parser_type_charset) {
+                    return wrapper_cb(repeat(expect_custom_charset(parser->repeat.parser->expect_charset.expected)));
+                }
+                return wrapper_cb(repeat(compile_impl(parser->repeat.parser, wrapper_cb)));
             }
             return wrapper_cb(repeat(compile_impl(parser->repeat.parser, wrapper_cb), parser->repeat.min, parser->repeat.max));
         case parsi_parser_type_optional:
@@ -108,13 +121,6 @@ static RTParser compile_to_rtparser(parsi_parser_t* parser)
 struct parsi_compiled_parser {
     parsi::RTParser parser;
 };
-
-static bool parsi_charset_check(const parsi_charset_t* charset, char chr)
-{
-    const std::size_t idx = static_cast<std::size_t>(chr);
-    const std::size_t bit = static_cast<std::size_t>(1) << (idx & 63ull);  // idx % 64
-    return charset->bitset[idx >> 6ull] & bit;  // idx / 64
-}
 
 parsi_charset_t parsi_charset(const char* str)
 {

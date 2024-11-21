@@ -1,7 +1,6 @@
 #ifndef PARSI_FN_SEQUENCE_HPP
 #define PARSI_FN_SEQUENCE_HPP
 
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -19,40 +18,35 @@ namespace parsi::fn {
  */
 template <is_parser... Fs>
 struct Sequence {
-    std::tuple<std::remove_cvref_t<Fs>...> parsers;
+    static_assert(sizeof...(Fs) >= 0);
+};
 
-    constexpr explicit Sequence(std::remove_cvref_t<Fs>... parsers) noexcept
-        : parsers(std::move(parsers)...)
+template <is_parser F, is_parser... Fs>
+struct Sequence<F, Fs...> {
+    std::remove_cvref_t<F> parser;
+    Sequence<std::remove_cvref_t<Fs>...> parsers;
+
+    constexpr explicit Sequence(std::remove_cvref_t<F> parser, std::remove_cvref_t<Fs>... parsers) noexcept
+        : parser(std::move(parser))
+        , parsers(std::move(parsers)...)
     {
     }
 
     [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if constexpr (sizeof...(Fs) == 0) {
-            return Result{stream, true};
-        } else {
-            return parse_rec<0>(stream);
+        auto res = parser(stream);
+        if (!res) [[unlikely]] {
+            return Result{stream, false};
         }
+        return parsers(res.stream());
     }
+};
 
-private:
-    template <std::size_t I>
-        requires (I < sizeof...(Fs))
-    [[nodiscard]] constexpr auto parse_rec(Stream stream) const noexcept -> Result
+template <>
+struct Sequence<> {
+    [[nodiscard]] constexpr auto operator()(Stream stream) const noexcept -> Result
     {
-        if constexpr (I == sizeof...(Fs)-1) {
-            auto res = std::get<I>(parsers)(stream);
-            if (!res) {
-                return Result{stream, false};
-            }
-            return res;
-        } else {
-            auto res = std::get<I>(parsers)(stream);
-            if (!res) {
-                return Result{stream, false};
-            }
-            return parse_rec<I+1>(res.stream());
-        }
+        return Result{stream, true};
     }
 };
 
